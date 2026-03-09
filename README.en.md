@@ -57,6 +57,7 @@ The template is intended for a system-domain `LaunchDaemon`, runs as `root` by d
 - Working directory: `/opt/mlx-audio-bridge`
 - Log directory: `/opt/mlx-audio-bridge/run/`
 - Model directory: `/opt/mlx-audio-bridge/models/`
+- Config directory: `/opt/mlx-audio-bridge/config/`
 - Default bind address: `127.0.0.1:8000`
 
 Before loading it, update at least:
@@ -72,7 +73,7 @@ Before loading it, update at least:
 First-time installation:
 
 ```bash
-sudo mkdir -p /opt/mlx-audio-bridge/run /opt/mlx-audio-bridge/models
+sudo mkdir -p /opt/mlx-audio-bridge/run /opt/mlx-audio-bridge/models /opt/mlx-audio-bridge/config
 sudo cp /opt/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist /Library/LaunchDaemons/
 sudo plutil -lint /Library/LaunchDaemons/com.quasarryan.mlxaudio.api.plist
 sudo launchctl bootstrap system /Library/LaunchDaemons/com.quasarryan.mlxaudio.api.plist
@@ -143,8 +144,8 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 | --- | --- | --- |
 | `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`) or a direct MLX model id / path | OpenAI aliases resolve through `QWEN_MODEL_DIR` + `QWEN_TTS_MODEL_NAME`, or pass through directly |
 | `input` | Required text input | `text` |
-| `voice` | OpenAI built-in voices are mapped to Qwen speakers via `OPENAI_VOICE_MAP`; unknown values pass through | `voice` |
-| `instructions` | Combined with a voice-style hint from `OPENAI_VOICE_STYLE_MAP`; passed best-effort to the backend | `instruct` when supported |
+| `voice` | OpenAI built-in voice names hit hardcoded service presets directly; if `/opt/mlx-audio-bridge/config/voice-style.json` contains the same key, it overrides that preset | `voice` |
+| `instructions` | Combined with the stable style prompt from the built-in preset or `voice-style.json` override | `instruct` when supported |
 | `speed` | Range validated like OpenAI | `speed` |
 | `response_format` | Encoded to `mp3`, `opus`, `aac`, `flac`, `wav`, or `pcm` | Post-processed response audio |
 | `stream_format=sse` | Returns OpenAI-style `speech.audio.delta` / `speech.audio.done` SSE events | Service-side chunked stream |
@@ -162,8 +163,6 @@ The main gap is language: OpenAI TTS does not expose a `language` field, while Q
 | `QWEN_TTS_MODEL` | empty | Backward-compatible direct override for a TTS model path or Hugging Face model id |
 | `QWEN_ASR_MODEL` | empty | Backward-compatible direct override for an STT model path or Hugging Face model id |
 | `QWEN_TTS_LANGUAGE` | empty | Force a backend language instead of auto-inference |
-| `OPENAI_VOICE_MAP` | built-in JSON map | Maps OpenAI voice names to Qwen speakers |
-| `OPENAI_VOICE_STYLE_MAP` | built-in JSON map | Voice-style hints folded into `instructions` |
 
 If your model layout looks like this:
 
@@ -175,11 +174,25 @@ If your model layout looks like this:
 
 then setting `QWEN_MODEL_DIR=/opt/mlx-audio-bridge/models` is enough.
 
-Example custom voice mapping:
+For compatibility with OpenAI voices such as `alloy`, `ash`, and `nova`, the service includes built-in default prompts that approximate the official voice intent. The actual generated sound is still the final source of truth. You can override those defaults, or add custom voices, in `/opt/mlx-audio-bridge/config/voice-style.json`.
 
-```bash
-export OPENAI_VOICE_MAP='{"alloy":"Chelsie","nova":"Chelsie","sage":"Chelsie"}'
+If you do want to override a few voices, create `/opt/mlx-audio-bridge/config/voice-style.json`. Its structure is `OpenAI voice -> config object`, where each object can define both the backend `voice` and stable style `instructions`, for example:
+
+```json
+{
+  "alloy": {
+    "voice": "Chelsie",
+    "instructions": "Use a balanced, neutral, polished assistant voice with medium pitch, clean articulation, steady pacing, restrained emotion, and consistent professional delivery."
+  },
+  "nova": {
+    "instructions": "Use a bright, modern, energetic voice with upbeat momentum, clean projection, and lively but controlled expression."
+  }
+}
 ```
+
+You can also add custom voices in the same format.
+
+This file acts as an override layer, not a full replacement. Any voice you leave out continues using the service's built-in defaults. The repository includes an optional sample file: [deploy/voice-style.json](/Users/ryan/works/services/mlx-audio-bridge/deploy/voice-style.json).
 
 ## STT reservation
 

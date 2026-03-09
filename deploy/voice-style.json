@@ -1,0 +1,10 @@
+{
+  "alloy": {
+    "voice": "Chelsie",
+    "instructions": "Use a balanced, neutral, polished assistant voice with medium pitch, clean articulation, steady pacing, restrained emotion, and consistent professional delivery."
+  },
+  "nova": {
+    "voice": "Chelsie",
+    "instructions": "Use a bright, modern, energetic voice with upbeat momentum, clean projection, and lively but controlled expression."
+  }
+}

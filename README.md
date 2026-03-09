@@ -26,10 +26,16 @@
 
 ## 安装
 
-需要 Python 3.10 到 3.12，且运行环境必须是搭载 Apple silicon 的 macOS。
+需要 Python 3.10 到 3.13，且运行环境必须是搭载 Apple silicon 的 macOS。
 
 ```bash
 UV_CACHE_DIR=.uv-cache UV_PROJECT_ENVIRONMENT=.venv uv sync --extra dev
+```
+
+如果你想显式指定 Python 版本，可以这样写：
+
+```bash
+UV_CACHE_DIR=.uv-cache UV_PROJECT_ENVIRONMENT=.venv uv sync --python 3.13 --extra dev
 ```
 
 如果需要返回 `mp3`、`opus`、`aac`、`flac`，还需要安装 `ffmpeg`：

@@ -24,10 +24,16 @@ Reserved for future Qwen-ASR integration:
 
 ## Install
 
-Python 3.10-3.12 is required. The runtime environment must be macOS on Apple silicon.
+Python 3.10-3.13 is required. The runtime environment must be macOS on Apple silicon.
 
 ```bash
 UV_CACHE_DIR=.uv-cache UV_PROJECT_ENVIRONMENT=.venv uv sync --extra dev
+```
+
+If you want to pin a specific Python version explicitly, use:
+
+```bash
+UV_CACHE_DIR=.uv-cache UV_PROJECT_ENVIRONMENT=.venv uv sync --python 3.13 --extra dev
 ```
 
 `ffmpeg` is required for `mp3`, `opus`, `aac`, and `flac` responses.

@@ -41,7 +41,7 @@ brew install ffmpeg
 Set the backend model first. The default is the documented MLX example model.
 
 ```bash
-export QWEN_TTS_MODEL=mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16
+export QWEN_MODEL_DIR=/opt/mlx-audio-bridge/models
 export API_KEY=local-dev-key
 mlx-audio-bridge-server --host 0.0.0.0 --port 8000
 ```
@@ -50,65 +50,74 @@ mlx-audio-bridge-server --host 0.0.0.0 --port 8000
 
 The repository includes a `launchd` template file: [deploy/com.quasarryan.mlxaudio.api.plist](/Users/ryan/works/services/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist).
 
-The template is pinned to the current repository layout:
+The template is intended for a system-domain `LaunchDaemon`, runs as `root` by default, and is pinned to an `/opt/mlx-audio-bridge` deployment layout:
 
-- Executable: `/Users/ryan/works/services/mlx-audio-bridge/.venv/bin/mlx-audio-bridge-server`
-- Working directory: `/Users/ryan/works/services/mlx-audio-bridge`
-- Log directory: `/Users/ryan/works/services/mlx-audio-bridge/run/`
+- Runtime user: `root`
+- Executable: `/opt/mlx-audio-bridge/.venv/bin/mlx-audio-bridge-server`
+- Working directory: `/opt/mlx-audio-bridge`
+- Log directory: `/opt/mlx-audio-bridge/run/`
+- Model directory: `/opt/mlx-audio-bridge/models/`
 - Default bind address: `127.0.0.1:8000`
 
 Before loading it, update at least:
 
 - `Label`
+- `UserName`, which defaults to `root`
 - `API_KEY`
-- `QWEN_TTS_MODEL`
+- `QWEN_MODEL_DIR`, which defaults to `/opt/mlx-audio-bridge/models`
+- Add `QWEN_TTS_MODEL_NAME` / `QWEN_ASR_MODEL_NAME` only if your subdirectory names differ from the defaults
 - `--host` and `--port` in `ProgramArguments`
 - Any absolute paths that differ on your machine
 
 First-time installation:
 
 ```bash
-mkdir -p /Users/ryan/works/services/mlx-audio-bridge/run
-cp /Users/ryan/works/services/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist ~/Library/LaunchAgents/
-plutil -lint ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
-launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
-launchctl enable "gui/$(id -u)/com.quasarryan.mlxaudio.api"
-launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+sudo mkdir -p /opt/mlx-audio-bridge/run /opt/mlx-audio-bridge/models
+sudo cp /opt/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist /Library/LaunchDaemons/
+sudo plutil -lint /Library/LaunchDaemons/com.quasarryan.mlxaudio.api.plist
+sudo launchctl bootstrap system /Library/LaunchDaemons/com.quasarryan.mlxaudio.api.plist
+sudo launchctl enable system/com.quasarryan.mlxaudio.api
+sudo launchctl kickstart -k system/com.quasarryan.mlxaudio.api
 ```
 
 Check service status:
 
 ```bash
-launchctl print "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+sudo launchctl print system/com.quasarryan.mlxaudio.api
 ```
 
 Check logs:
 
 ```bash
-tail -f /Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stdout.log
-tail -f /Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stderr.log
+tail -f /opt/mlx-audio-bridge/run/mlx-audio-bridge.stdout.log
+tail -f /opt/mlx-audio-bridge/run/mlx-audio-bridge.stderr.log
 ```
 
 If you changed the plist, reload it like this:
 
 ```bash
-launchctl bootout "gui/$(id -u)/com.quasarryan.mlxaudio.api"
-launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
-launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+sudo launchctl bootout system/com.quasarryan.mlxaudio.api
+sudo launchctl bootstrap system /Library/LaunchDaemons/com.quasarryan.mlxaudio.api.plist
+sudo launchctl kickstart -k system/com.quasarryan.mlxaudio.api
 ```
 
 If you only updated code or dependencies and did not change the plist, a restart is enough:
 
 ```bash
-launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+sudo launchctl kickstart -k system/com.quasarryan.mlxaudio.api
 ```
 
 To stop it and disable auto-start:
 
 ```bash
-launchctl bootout "gui/$(id -u)/com.quasarryan.mlxaudio.api"
-launchctl disable "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+sudo launchctl bootout system/com.quasarryan.mlxaudio.api
+sudo launchctl disable system/com.quasarryan.mlxaudio.api
 ```
+
+If you want to run it as another user, you have two options:
+
+- Keep it as a `LaunchDaemon`: change `UserName` in the plist from `root` to your target account, for example `svc-mlxaudio`, and make sure that user can read and write `/opt/mlx-audio-bridge`, `run/`, and `models/`. The `launchctl` commands stay in the `system` domain.
+- Convert it to a per-user `LaunchAgent`: remove `UserName`, install the plist into `~/Library/LaunchAgents/`, and replace `system` in the `launchctl` commands with `gui/$(id -u)`. That makes it follow the login session of that user instead of running as a system daemon.
 
 ## OpenAI-compatible usage
 
@@ -132,7 +141,7 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 
 | OpenAI field | Service behavior | Qwen3-TTS / MLX mapping |
 | --- | --- | --- |
-| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`) or a direct MLX model id | Resolved to `QWEN_TTS_MODEL` or passed through |
+| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`) or a direct MLX model id / path | OpenAI aliases resolve through `QWEN_MODEL_DIR` + `QWEN_TTS_MODEL_NAME`, or pass through directly |
 | `input` | Required text input | `text` |
 | `voice` | OpenAI built-in voices are mapped to Qwen speakers via `OPENAI_VOICE_MAP`; unknown values pass through | `voice` |
 | `instructions` | Combined with a voice-style hint from `OPENAI_VOICE_STYLE_MAP`; passed best-effort to the backend | `instruct` when supported |
@@ -147,11 +156,24 @@ The main gap is language: OpenAI TTS does not expose a `language` field, while Q
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `API_KEY` | unset | If set, requires `Authorization: Bearer <key>` |
-| `QWEN_TTS_MODEL` | `mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16` | Backend MLX Qwen3-TTS model |
-| `QWEN_ASR_MODEL` | `mlx-community/Qwen3-ASR-0.6B-8bit` | Reserved STT model id for future wiring |
+| `QWEN_MODEL_DIR` | `/opt/mlx-audio-bridge/models` | Shared root directory for local TTS and STT models |
+| `QWEN_TTS_MODEL_NAME` | `Qwen3-TTS-12Hz-0.6B-Base-bf16` | TTS model subdirectory name |
+| `QWEN_ASR_MODEL_NAME` | `Qwen3-ASR-0.6B-8bit` | Reserved STT model subdirectory name |
+| `QWEN_TTS_MODEL` | empty | Backward-compatible direct override for a TTS model path or Hugging Face model id |
+| `QWEN_ASR_MODEL` | empty | Backward-compatible direct override for an STT model path or Hugging Face model id |
 | `QWEN_TTS_LANGUAGE` | empty | Force a backend language instead of auto-inference |
 | `OPENAI_VOICE_MAP` | built-in JSON map | Maps OpenAI voice names to Qwen speakers |
 | `OPENAI_VOICE_STYLE_MAP` | built-in JSON map | Voice-style hints folded into `instructions` |
+
+If your model layout looks like this:
+
+```text
+/opt/mlx-audio-bridge/models/
+  Qwen3-TTS-12Hz-0.6B-Base-bf16/
+  Qwen3-ASR-0.6B-8bit/
+```
+
+then setting `QWEN_MODEL_DIR=/opt/mlx-audio-bridge/models` is enough.
 
 Example custom voice mapping:
 

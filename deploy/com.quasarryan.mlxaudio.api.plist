@@ -5,9 +5,13 @@
   <key>Label</key>
   <string>com.quasarryan.mlxaudio.api</string>
 
+  <!-- Default: run as root in the privileged system domain. -->
+  <key>UserName</key>
+  <string>root</string>
+
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/ryan/works/services/mlx-audio-bridge/.venv/bin/mlx-audio-bridge-server</string>
+    <string>/opt/mlx-audio-bridge/.venv/bin/mlx-audio-bridge-server</string>
     <string>--host</string>
     <string>127.0.0.1</string>
     <string>--port</string>
@@ -15,7 +19,7 @@
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/ryan/works/services/mlx-audio-bridge</string>
+  <string>/opt/mlx-audio-bridge</string>
 
   <key>EnvironmentVariables</key>
   <dict>
@@ -23,8 +27,8 @@
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <key>API_KEY</key>
     <string>change-me</string>
-    <key>QWEN_TTS_MODEL</key>
-    <string>mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16</string>
+    <key>QWEN_MODEL_DIR</key>
+    <string>/opt/mlx-audio-bridge/models</string>
   </dict>
 
   <key>RunAtLoad</key>
@@ -34,9 +38,9 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stdout.log</string>
+  <string>/opt/mlx-audio-bridge/run/mlx-audio-bridge.stdout.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stderr.log</string>
+  <string>/opt/mlx-audio-bridge/run/mlx-audio-bridge.stderr.log</string>
 </dict>
 </plist>

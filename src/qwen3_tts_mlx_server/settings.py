@@ -4,10 +4,14 @@ import json
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 
-DEFAULT_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
-DEFAULT_ASR_MODEL = "mlx-community/Qwen3-ASR-0.6B-8bit"
+DEFAULT_MODEL_DIR = "/opt/mlx-audio-bridge/models"
+DEFAULT_TTS_MODEL_NAME = "Qwen3-TTS-12Hz-0.6B-Base-bf16"
+DEFAULT_ASR_MODEL_NAME = "Qwen3-ASR-0.6B-8bit"
+LEGACY_DEFAULT_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
+LEGACY_DEFAULT_ASR_MODEL = "mlx-community/Qwen3-ASR-0.6B-8bit"
 OPENAI_TTS_ALIASES = ("gpt-4o-mini-tts", "tts-1", "tts-1-hd")
 OPENAI_STT_ALIASES = ("gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1")
 
@@ -93,13 +97,45 @@ def _load_json_mapping(env_name: str, fallback: dict[str, str]) -> dict[str, str
     return json.loads(raw_value)
 
 
+def _resolve_model_location(
+    *,
+    direct_env_name: str,
+    name_env_name: str,
+    default_model_name: str,
+    legacy_default_model: str,
+) -> str:
+    direct_value = os.getenv(direct_env_name)
+    if direct_value:
+        return direct_value
+
+    model_dir = os.getenv("QWEN_MODEL_DIR", DEFAULT_MODEL_DIR).strip()
+    model_name = os.getenv(name_env_name, default_model_name).strip()
+
+    if not model_dir:
+        return legacy_default_model
+    if not model_name:
+        return model_dir
+    if Path(model_name).is_absolute() or "/" in model_name:
+        return model_name
+    return str(Path(model_dir) / model_name)
+
+
 def load_settings() -> Settings:
     return Settings(
         api_key=os.getenv("API_KEY"),
-        default_tts_model=os.getenv("QWEN_TTS_MODEL", DEFAULT_TTS_MODEL),
-        default_asr_model=os.getenv("QWEN_ASR_MODEL", DEFAULT_ASR_MODEL),
+        default_tts_model=_resolve_model_location(
+            direct_env_name="QWEN_TTS_MODEL",
+            name_env_name="QWEN_TTS_MODEL_NAME",
+            default_model_name=DEFAULT_TTS_MODEL_NAME,
+            legacy_default_model=LEGACY_DEFAULT_TTS_MODEL,
+        ),
+        default_asr_model=_resolve_model_location(
+            direct_env_name="QWEN_ASR_MODEL",
+            name_env_name="QWEN_ASR_MODEL_NAME",
+            default_model_name=DEFAULT_ASR_MODEL_NAME,
+            legacy_default_model=LEGACY_DEFAULT_ASR_MODEL,
+        ),
         forced_language=os.getenv("QWEN_TTS_LANGUAGE") or None,
         voice_map=_load_json_mapping("OPENAI_VOICE_MAP", DEFAULT_VOICE_MAP),
         voice_style_map=_load_json_mapping("OPENAI_VOICE_STYLE_MAP", DEFAULT_VOICE_STYLE_MAP),
     )
-

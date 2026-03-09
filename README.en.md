@@ -126,6 +126,12 @@ If you want to run it as another user, you have two options:
 - Keep it as a `LaunchDaemon`: change `UserName` in the plist from `root` to your target account, for example `svc-mlxaudio`, and make sure that user can read and write `/opt/mlx-audio-bridge`, `run/`, and `models/`. The `launchctl` commands stay in the `system` domain.
 - Convert it to a per-user `LaunchAgent`: remove `UserName`, install the plist into `~/Library/LaunchAgents/`, and replace `system` in the `launchctl` commands with `gui/$(id -u)`. That makes it follow the login session of that user instead of running as a system daemon.
 
+If you change the runtime user in the plist, remember to recursively re-own the working directory, for example:
+
+```bash
+sudo chown -R svc-mlxaudio:staff /opt/mlx-audio-bridge
+```
+
 ## OpenAI-compatible usage
 
 ```bash

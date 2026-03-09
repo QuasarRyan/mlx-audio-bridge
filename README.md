@@ -128,6 +128,12 @@ sudo launchctl disable system/com.quasarryan.mlxaudio.api
 - 继续作为 `LaunchDaemon` 运行：把 plist 里的 `UserName` 从 `root` 改成目标用户，例如 `svc-mlxaudio`，然后确保 `/opt/mlx-audio-bridge`、`run/`、`models/` 对该用户可读写。`launchctl` 的 system 域命令保持不变。
 - 改成登录用户自己的 `LaunchAgent`：删除 plist 里的 `UserName`，把文件放到 `~/Library/LaunchAgents/`，并把所有 `launchctl` 命令里的 `system` 改成 `gui/$(id -u)`。这种方式会随该用户登录态运行，而不是系统级守护进程。
 
+如果你调整了 plist 里的运行用户，记得把工作目录递归改成该用户拥有，例如：
+
+```bash
+sudo chown -R svc-mlxaudio:staff /opt/mlx-audio-bridge
+```
+
 ## OpenAI Compatible 调用示例
 
 ```bash

@@ -11,8 +11,11 @@ class SpeechSynthesisRequest:
     public_model: str
     backend_model: str
     text: str
+    voice_mode: str | None
     voice: str | None
     instructions: str | None
+    prompt_audio_path: str | None
+    prompt_text: str | None
     language: str | None
     speed: float
     response_format: str
@@ -31,4 +34,3 @@ class TTSBackend(ABC):
     @abstractmethod
     def synthesize(self, request: SpeechSynthesisRequest) -> SynthesizedAudio:
         raise NotImplementedError
-

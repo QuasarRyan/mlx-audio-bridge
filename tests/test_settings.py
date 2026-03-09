@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 import qwen3_tts_mlx_server.settings as settings_module
-from qwen3_tts_mlx_server.settings import Settings, load_settings
+from qwen3_tts_mlx_server.settings import DEFAULT_VOICE_DESIGN_SPEAKER, Settings, load_settings
 
 
 def test_load_settings_builds_model_paths_from_shared_model_dir(monkeypatch) -> None:
@@ -30,49 +30,57 @@ def test_load_settings_keeps_legacy_direct_model_overrides(monkeypatch) -> None:
     assert settings.default_asr_model == "/tmp/custom-asr"
 
 
-def test_load_settings_reads_voice_style_overrides_from_file(monkeypatch, tmp_path) -> None:
-    style_map_file = tmp_path / "voice-style.json"
-    style_map_file.write_text(
-        json.dumps({"alloy": {"instructions": "Calm and bright."}}),
-        encoding="utf-8",
-    )
+def test_load_settings_reads_voice_overrides_from_file(monkeypatch, tmp_path) -> None:
+    voices_file = tmp_path / "voices.json"
+    voices_file.write_text(json.dumps({"alloy": {"mode": "voice_design", "voice_description": "Calm and bright."}}), encoding="utf-8")
 
-    monkeypatch.setattr(settings_module, "DEFAULT_VOICE_STYLE_FILE", str(style_map_file))
+    monkeypatch.setattr(settings_module, "DEFAULT_VOICES_FILE", str(voices_file))
 
     settings = load_settings()
 
-    assert settings.voice_style_map["alloy"] == {
-        "voice": "Chelsie",
-        "instructions": "Calm and bright.",
-    }
+    assert settings.voices["alloy"]["mode"] == "voice_design"
+    assert settings.voices["alloy"]["voice_description"] == "Calm and bright."
 
 
-def test_missing_voice_style_file_keeps_defaults(monkeypatch, tmp_path) -> None:
-    missing_file = tmp_path / "missing-voice-style.json"
-    monkeypatch.setattr(settings_module, "DEFAULT_VOICE_STYLE_FILE", str(missing_file))
+def test_missing_voices_file_keeps_defaults(monkeypatch, tmp_path) -> None:
+    missing_file = tmp_path / "missing-voices.json"
+    monkeypatch.setattr(settings_module, "DEFAULT_VOICES_FILE", str(missing_file))
 
     settings = load_settings()
 
-    assert isinstance(settings.voice_style_map["alloy"], dict)
-    assert settings.voice_style_map["alloy"]["voice"] == "Chelsie"
+    assert settings.voices["alloy"]["mode"] == "voice_design"
+    assert settings.resolve_voice("alloy") == DEFAULT_VOICE_DESIGN_SPEAKER
 
 
-def test_preset_mapping_resolves_backend_voice_and_style() -> None:
+def test_voice_modes_resolve_backend_voice_and_prompt_fields() -> None:
     settings = Settings(
         api_key=None,
         default_tts_model="tts-model",
         default_asr_model="asr-model",
         forced_language=None,
-        voice_style_map={
-            "alloy": {
-                "voice": "Chelsie",
-                "instructions": "Balanced, neutral, and polished.",
+        voices={
+            "maid": {
+                "mode": "voice_design",
+                "voice_description": "A calm maid voice.",
+            },
+            "serena": {
+                "mode": "custom_voice",
+                "speaker": "Serena",
+            },
+            "assistant": {
+                "mode": "voice_clone",
+                "prompt_audio_path": "/tmp/reference.wav",
+                "prompt_text": "Reference prompt text.",
             }
         },
     )
 
-    assert settings.resolve_voice("alloy") == "Chelsie"
-    assert settings.compose_instructions("alloy", "Speak a little slower.") == (
-        "Voice style: Balanced, neutral, and polished.\n"
+    assert settings.resolve_voice("maid") == DEFAULT_VOICE_DESIGN_SPEAKER
+    assert settings.resolve_voice("serena") == "Serena"
+    assert settings.resolve_voice_mode("assistant") == "voice_clone"
+    assert settings.resolve_prompt_audio_path("assistant") == "/tmp/reference.wav"
+    assert settings.resolve_prompt_text("assistant") == "Reference prompt text."
+    assert settings.compose_instructions("maid", "Speak a little slower.") == (
+        "Voice design: A calm maid voice.\n"
         "Additional instructions: Speak a little slower."
     )

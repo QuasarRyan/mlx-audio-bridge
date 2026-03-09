@@ -57,10 +57,24 @@ class QwenMLXTTSBackend(TTSBackend):
             generate_kwargs["language"] = request.language
         if request.instructions:
             generate_kwargs["instruct"] = request.instructions
+        if request.prompt_audio_path:
+            generate_kwargs["prompt_audio_path"] = request.prompt_audio_path
+        if request.prompt_text:
+            generate_kwargs["prompt_text"] = request.prompt_text
 
         try:
             raw_result = model.generate(**generate_kwargs)
         except TypeError as exc:
+            if request.voice_mode == "voice_clone":
+                raise OpenAIHTTPException(
+                    status_code=501,
+                    message=(
+                        "The current mlx-audio backend does not expose the prompt-audio inputs required "
+                        "for voice_clone mode."
+                    ),
+                    error_type="server_error",
+                    code="voice_clone_not_supported",
+                ) from exc
             if "instruct" not in generate_kwargs:
                 raise
             generate_kwargs.pop("instruct", None)
@@ -134,4 +148,3 @@ class QwenMLXTTSBackend(TTSBackend):
         if hasattr(value, "numpy"):
             return np.asarray(value.numpy(), dtype=np.float32).reshape(-1)
         return np.asarray(value, dtype=np.float32).reshape(-1)
-

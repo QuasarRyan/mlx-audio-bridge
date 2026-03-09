@@ -1,0 +1,23 @@
+{
+  "maid": {
+    "mode": "voice_design",
+    "voice_description": "一位22-25岁左右的私人女仆音色。音质如同沉静的深夜，音调中性偏高，但是完全剥离了尖锐感与甜腻感，呈现出一种厚实且柔和的共鸣感。语气恭敬而克制，说话节奏偏快，带着呼吸音的质感。"
+  },
+  "storyteller": {
+    "mode": "voice_design",
+    "voice_description": "Warm Mandarin narrator voice, low expressiveness."
+  },
+  "vivian": {
+    "mode": "custom_voice",
+    "speaker": "Vivian"
+  },
+  "serena": {
+    "mode": "custom_voice",
+    "speaker": "Serena"
+  },
+  "assistant": {
+    "mode": "voice_clone",
+    "prompt_audio_path": "/opt/mlx-audio-bridge/references/assistant/default.wav",
+    "prompt_text": "如果你愿意，我可以给你一个简短的当前状态回顾"
+  }
+}

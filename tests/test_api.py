@@ -31,10 +31,15 @@ def build_client() -> tuple[TestClient, StubTTSBackend]:
         default_tts_model="mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
         default_asr_model="mlx-community/Qwen3-ASR-0.6B-8bit",
         forced_language=None,
-        voice_style_map={
+        voices={
             "alloy": {
-                "voice": "Chelsie",
-                "instructions": "Neutral and polished.",
+                "mode": "voice_design",
+                "voice_description": "Neutral and polished.",
+            },
+            "assistant": {
+                "mode": "voice_clone",
+                "prompt_audio_path": "/tmp/reference.wav",
+                "prompt_text": "Reference prompt text.",
             }
         },
     )
@@ -67,6 +72,26 @@ def test_speech_endpoint_maps_openai_fields_to_backend() -> None:
     assert backend_call.language == "English"
     assert "Neutral and polished." in (backend_call.instructions or "")
     assert "Speak slowly." in (backend_call.instructions or "")
+
+
+def test_speech_endpoint_supports_voice_clone_config() -> None:
+    client, backend = build_client()
+
+    response = client.post(
+        "/v1/audio/speech",
+        json={
+            "model": "gpt-4o-mini-tts",
+            "input": "Use the assistant reference.",
+            "voice": "assistant",
+            "response_format": "wav",
+        },
+    )
+
+    assert response.status_code == 200
+    backend_call = backend.calls[0]
+    assert backend_call.voice == ""
+    assert backend_call.prompt_audio_path == "/tmp/reference.wav"
+    assert backend_call.prompt_text == "Reference prompt text."
 
 
 def test_speech_endpoint_supports_sse_streaming() -> None:

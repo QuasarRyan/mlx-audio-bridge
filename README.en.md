@@ -189,10 +189,6 @@ Example:
 
 ```json
 {
-  "maid": {
-    "mode": "voice_design",
-    "voice_description": "A private maid voice in her early twenties with a soft but substantial resonance, respectful restraint, slightly faster pacing, and a warm airy texture."
-  },
   "storyteller": {
     "mode": "voice_design",
     "voice_description": "Warm Mandarin narrator voice, low expressiveness."
@@ -201,16 +197,13 @@ Example:
     "mode": "custom_voice",
     "speaker": "Vivian"
   },
-  "serena": {
-    "mode": "custom_voice",
-    "speaker": "Serena"
-  },
   "assistant": {
     "mode": "voice_clone",
-    "prompt_audio_path": "/opt/mlx-audio-bridge/references/assistant/default.wav",
-    "prompt_text": "如果你愿意，我可以给你一个简短的当前状态回顾"
+    "prompt_audio_path": "path of your reference audio",
+    "prompt_text": "accurate content of your reference audio"
   }
 }
+
 ```
 
 This file acts as an extension and override layer. You do not need to repeat every OpenAI-native voice in it; any built-in voice you leave out continues using the service defaults. The repository includes an optional sample file: [deploy/voices.json](/Users/ryan/works/services/mlx-audio-bridge/deploy/voices.json).

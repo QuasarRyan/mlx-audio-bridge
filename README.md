@@ -2,7 +2,7 @@
 
 这是一个基于 `mlx-audio` 的本地 REST 服务，用来实现兼容 OpenAI 的 TTS / STT 音频接口桥接层。当前 TTS 已接入 MLX 版 `Qwen3-TTS`，STT 接口已预留给后续 `Qwen-ASR`。
 
-英文版说明已移到 [README.en.md](./README.en.md)。
+Or in English: [README.en.md](./README.en.md)。
 
 > 注意：该项目只能运行在搭载 Apple silicon 的 Mac 上，不支持 Intel Mac，也不支持 Linux 或 Windows。
 

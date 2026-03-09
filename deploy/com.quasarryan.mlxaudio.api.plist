@@ -12,10 +12,6 @@
   <key>ProgramArguments</key>
   <array>
     <string>/opt/mlx-audio-bridge/.venv/bin/mlx-audio-bridge-server</string>
-    <string>--host</string>
-    <string>127.0.0.1</string>
-    <string>--port</string>
-    <string>8000</string>
   </array>
 
   <key>WorkingDirectory</key>
@@ -27,6 +23,10 @@
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <key>API_KEY</key>
     <string>change-me</string>
+    <key>BIND_ADDRESS</key>
+    <string>127.0.0.1</string>
+    <key>PORT</key>
+    <string>8008</string>
     <key>QWEN_MODEL_DIR</key>
     <string>/opt/mlx-audio-bridge/models</string>
   </dict>

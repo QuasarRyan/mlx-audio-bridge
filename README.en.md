@@ -49,7 +49,15 @@ Set the backend model first. The default is the documented MLX example model.
 ```bash
 export QWEN_MODEL_DIR=/opt/mlx-audio-bridge/models
 export API_KEY=local-dev-key
-mlx-audio-bridge-server --host 0.0.0.0 --port 8000
+mlx-audio-bridge-server
+```
+
+The default listener is `127.0.0.1:8008`. If you want to allow external access, set:
+
+```bash
+export BIND_ADDRESS=0.0.0.0
+export PORT=8008
+mlx-audio-bridge-server
 ```
 
 ## Deploy With launchd
@@ -64,17 +72,20 @@ The template is intended for a system-domain `LaunchDaemon`, runs as `root` by d
 - Log directory: `/opt/mlx-audio-bridge/run/`
 - Model directory: `/opt/mlx-audio-bridge/models/`
 - Config directory: `/opt/mlx-audio-bridge/config/`
-- Default bind address: `127.0.0.1:8000`
+- Default bind address: `127.0.0.1:8008`
 
 Before loading it, update at least:
 
 - `Label`
 - `UserName`, which defaults to `root`
 - `API_KEY`
+- `BIND_ADDRESS`, which defaults to `127.0.0.1`
+- `PORT`, which defaults to `8008`
 - `QWEN_MODEL_DIR`, which defaults to `/opt/mlx-audio-bridge/models`
 - Add `QWEN_TTS_MODEL_NAME` / `QWEN_ASR_MODEL_NAME` only if your subdirectory names differ from the defaults
-- `--host` and `--port` in `ProgramArguments`
 - Any absolute paths that differ on your machine
+
+If you want the service to be reachable from other machines, change `BIND_ADDRESS` to `0.0.0.0`.
 
 First-time installation:
 
@@ -135,7 +146,7 @@ sudo chown -R svc-mlxaudio:staff /opt/mlx-audio-bridge
 ## OpenAI-compatible usage
 
 ```bash
-curl http://localhost:8000/v1/audio/speech \
+curl http://localhost:8008/v1/audio/speech \
   -H "Authorization: Bearer local-dev-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -169,6 +180,8 @@ The main gap is language: OpenAI TTS does not expose a `language` field, while Q
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `API_KEY` | unset | If set, requires `Authorization: Bearer <key>` |
+| `BIND_ADDRESS` | `127.0.0.1` | Listener address; set this to `0.0.0.0` if you want to allow external access |
+| `PORT` | `8008` | Listener port |
 | `QWEN_MODEL_DIR` | `/opt/mlx-audio-bridge/models` | Shared root directory for local TTS and STT models |
 | `QWEN_TTS_MODEL_NAME` | `Qwen3-TTS-12Hz-0.6B-Base-bf16` | TTS model subdirectory name |
 | `QWEN_ASR_MODEL_NAME` | `Qwen3-ASR-0.6B-8bit` | Reserved STT model subdirectory name |

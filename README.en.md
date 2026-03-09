@@ -174,6 +174,8 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 | `response_format` | Encoded to `mp3`, `opus`, `aac`, `flac`, `wav`, or `pcm` | Post-processed response audio |
 | `stream_format=sse` | Returns OpenAI-style `speech.audio.delta` / `speech.audio.done` SSE events | Service-side chunked stream |
 
+For OpenAI client compatibility, model names such as `gpt-4o-mini-tts`, `tts-1`, and `tts-1-hd` are kept mainly as compatibility entry points. The service then chooses an appropriate Qwen3-TTS model family based on the selected voice capability type so it can balance compatibility, voice features, and output quality.
+
 The main gap is language: OpenAI TTS does not expose a `language` field, while Qwen3-TTS benefits from one. The service infers a best-effort language from the input script and falls back to `English`. Override with `QWEN_TTS_LANGUAGE`.
 
 ## Configuration

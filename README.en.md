@@ -48,7 +48,7 @@ mlx-audio-bridge-server --host 0.0.0.0 --port 8000
 
 ## Deploy With launchd
 
-The repository includes a `launchd` template file: [deploy/com.quasarryan.mlxaudio.api.plist](/Users/ryan/works/services/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist).
+The repository includes a `launchd` template file: [deploy/com.quasarryan.mlxaudio.api.plist](./deploy/com.quasarryan.mlxaudio.api.plist).
 
 The template is intended for a system-domain `LaunchDaemon`, runs as `root` by default, and is pinned to an `/opt/mlx-audio-bridge` deployment layout:
 
@@ -206,7 +206,7 @@ Example:
 
 ```
 
-This file acts as an extension and override layer. You do not need to repeat every OpenAI-native voice in it; any built-in voice you leave out continues using the service defaults. The repository includes an optional sample file: [deploy/voices.json](/Users/ryan/works/services/mlx-audio-bridge/deploy/voices.json).
+This file acts as an extension and override layer. You do not need to repeat every OpenAI-native voice in it; any built-in voice you leave out continues using the service defaults. The repository's [deploy/voices.json](./deploy/voices.json) already includes the OpenAI-native defaults together with examples for `voice_design` and `custom_voice`; the `voice_clone` example is kept in the README.
 
 ## STT reservation
 

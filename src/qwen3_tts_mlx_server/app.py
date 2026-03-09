@@ -41,7 +41,7 @@ def create_app(settings: Settings | None = None, tts_backend: TTSBackend | None 
     resolved_backend = tts_backend or QwenMLXTTSBackend()
     auth_dependency = _authorization_dependency(resolved_settings)
 
-    app = FastAPI(title="Qwen3-TTS MLX OpenAI-Compatible API", version="0.1.0")
+    app = FastAPI(title="mlx-audio-bridge API", version="0.1.0")
     app.add_exception_handler(OpenAIHTTPException, openai_http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)

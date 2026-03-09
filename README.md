@@ -1,8 +1,8 @@
-# Qwen3-TTS MLX OpenAI Compatible 服务
+# mlx-audio-bridge
 
-这是一个本地 REST 服务，用 MLX 版 `Qwen3-TTS` 作为后端，并暴露与 OpenAI Compatible API 对齐的音频接口。
+这是一个基于 `mlx-audio` 的本地 REST 服务，用来实现兼容 OpenAI 的 TTS / STT 音频接口桥接层。当前 TTS 已接入 MLX 版 `Qwen3-TTS`，STT 接口已预留给后续 `Qwen-ASR`。
 
-英文版说明已移到 [README.en.md](/Users/ryan/works/services/qwen3-tts-mlx/README.en.md)。
+英文版说明已移到 [README.en.md](/Users/ryan/works/services/mlx-audio-bridge/README.en.md)。
 
 > 注意：该项目只能运行在搭载 Apple silicon 的 Mac 上，不支持 Intel Mac，也不支持 Linux 或 Windows。
 
@@ -45,7 +45,71 @@ brew install ffmpeg
 ```bash
 export QWEN_TTS_MODEL=mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16
 export API_KEY=local-dev-key
-qwen3-tts-mlx-server --host 0.0.0.0 --port 8000
+mlx-audio-bridge-server --host 0.0.0.0 --port 8000
+```
+
+## 用 launchd 部署
+
+仓库里提供了一个 `launchd` 模板文件：[deploy/com.quasarryan.mlxaudio.api.plist](/Users/ryan/works/services/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist)。
+
+这个模板按当前仓库路径写死了以下内容：
+
+- 可执行文件：`/Users/ryan/works/services/mlx-audio-bridge/.venv/bin/mlx-audio-bridge-server`
+- 工作目录：`/Users/ryan/works/services/mlx-audio-bridge`
+- 日志目录：`/Users/ryan/works/services/mlx-audio-bridge/run/`
+- 默认监听：`127.0.0.1:8000`
+
+使用前请先编辑 plist，至少确认这些值：
+
+- `Label`
+- `API_KEY`
+- `QWEN_TTS_MODEL`
+- `ProgramArguments` 里的 `--host` 和 `--port`
+- 仓库绝对路径是否与你本机一致
+
+首次安装步骤：
+
+```bash
+mkdir -p /Users/ryan/works/services/mlx-audio-bridge/run
+cp /Users/ryan/works/services/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist ~/Library/LaunchAgents/
+plutil -lint ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
+launchctl enable "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+查看服务状态：
+
+```bash
+launchctl print "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+查看日志：
+
+```bash
+tail -f /Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stdout.log
+tail -f /Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stderr.log
+```
+
+如果你修改了 plist 内容，推荐这样重载：
+
+```bash
+launchctl bootout "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
+launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+如果你只更新了代码或依赖，没有改 plist，可以直接重启服务：
+
+```bash
+launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+如果要停止并取消开机自启：
+
+```bash
+launchctl bootout "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+launchctl disable "gui/$(id -u)/com.quasarryan.mlxaudio.api"
 ```
 
 ## OpenAI Compatible 调用示例

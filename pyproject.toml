@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qwen3-tts-mlx-openai"
+name = "mlx-audio-bridge"
 version = "0.1.0"
-description = "OpenAI-compatible REST service backed by MLX Qwen3-TTS."
+description = "OpenAI-compatible TTS/STT bridge backed by MLX Audio."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [
@@ -25,7 +25,7 @@ dev = [
 ]
 
 [project.scripts]
-qwen3-tts-mlx-server = "qwen3_tts_mlx_server.cli:main"
+mlx-audio-bridge-server = "qwen3_tts_mlx_server.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

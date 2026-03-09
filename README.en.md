@@ -1,6 +1,6 @@
-# Qwen3-TTS MLX OpenAI-Compatible Service
+# mlx-audio-bridge
 
-This repository provides a local REST service that exposes MLX Qwen3-TTS behind OpenAI-compatible audio endpoints.
+This repository provides a local REST bridge built on `mlx-audio` to expose OpenAI-compatible TTS and STT audio endpoints. TTS currently runs on MLX `Qwen3-TTS`, and the STT surface is reserved for later `Qwen-ASR` integration.
 
 > Note: This project only runs on Apple silicon Macs. Intel Macs, Linux, and Windows are not supported.
 
@@ -43,7 +43,71 @@ Set the backend model first. The default is the documented MLX example model.
 ```bash
 export QWEN_TTS_MODEL=mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16
 export API_KEY=local-dev-key
-qwen3-tts-mlx-server --host 0.0.0.0 --port 8000
+mlx-audio-bridge-server --host 0.0.0.0 --port 8000
+```
+
+## Deploy With launchd
+
+The repository includes a `launchd` template file: [deploy/com.quasarryan.mlxaudio.api.plist](/Users/ryan/works/services/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist).
+
+The template is pinned to the current repository layout:
+
+- Executable: `/Users/ryan/works/services/mlx-audio-bridge/.venv/bin/mlx-audio-bridge-server`
+- Working directory: `/Users/ryan/works/services/mlx-audio-bridge`
+- Log directory: `/Users/ryan/works/services/mlx-audio-bridge/run/`
+- Default bind address: `127.0.0.1:8000`
+
+Before loading it, update at least:
+
+- `Label`
+- `API_KEY`
+- `QWEN_TTS_MODEL`
+- `--host` and `--port` in `ProgramArguments`
+- Any absolute paths that differ on your machine
+
+First-time installation:
+
+```bash
+mkdir -p /Users/ryan/works/services/mlx-audio-bridge/run
+cp /Users/ryan/works/services/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist ~/Library/LaunchAgents/
+plutil -lint ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
+launchctl enable "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+Check service status:
+
+```bash
+launchctl print "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+Check logs:
+
+```bash
+tail -f /Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stdout.log
+tail -f /Users/ryan/works/services/mlx-audio-bridge/run/mlx-audio-bridge.stderr.log
+```
+
+If you changed the plist, reload it like this:
+
+```bash
+launchctl bootout "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.quasarryan.mlxaudio.api.plist
+launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+If you only updated code or dependencies and did not change the plist, a restart is enough:
+
+```bash
+launchctl kickstart -k "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+```
+
+To stop it and disable auto-start:
+
+```bash
+launchctl bootout "gui/$(id -u)/com.quasarryan.mlxaudio.api"
+launchctl disable "gui/$(id -u)/com.quasarryan.mlxaudio.api"
 ```
 
 ## OpenAI-compatible usage

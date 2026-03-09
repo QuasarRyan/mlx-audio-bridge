@@ -58,6 +58,7 @@ def test_load_settings_resolves_other_supported_tts_families(monkeypatch, tmp_pa
     monkeypatch.delenv("QWEN_TTS_MODEL_NAME", raising=False)
     monkeypatch.setenv("QWEN_MODEL_DIR", str(tmp_path))
     (tmp_path / "Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit").mkdir()
+    (tmp_path / "Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16").mkdir()
     (tmp_path / "Qwen3-TTS-12Hz-1.7B-VoiceDesign-5bit").mkdir()
     (tmp_path / "Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit").mkdir()
 
@@ -65,6 +66,7 @@ def test_load_settings_resolves_other_supported_tts_families(monkeypatch, tmp_pa
 
     assert settings.custom_voice_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit")
     assert settings.voice_design_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit")
+    assert settings.large_custom_voice_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16")
 
 
 def test_load_settings_reads_voice_overrides_from_file(monkeypatch, tmp_path) -> None:
@@ -95,6 +97,7 @@ def test_voice_modes_resolve_backend_voice_and_prompt_fields() -> None:
         default_tts_model="tts-model",
         custom_voice_tts_model="custom-voice-model",
         voice_design_tts_model="voice-design-model",
+        large_custom_voice_tts_model="large-custom-voice-model",
         default_asr_model="asr-model",
         forced_language=None,
         voices={
@@ -119,6 +122,9 @@ def test_voice_modes_resolve_backend_voice_and_prompt_fields() -> None:
     assert settings.resolve_voice_mode("assistant") == "voice_clone"
     assert settings.resolve_prompt_audio_path("assistant") == "/tmp/reference.wav"
     assert settings.resolve_prompt_text("assistant") == "Reference prompt text."
+    assert settings.resolve_tts_model("gpt-4o-mini-tts", "voice_design") == "voice-design-model"
+    assert settings.resolve_tts_model("gpt-4o-mini-tts", "custom_voice") == "custom-voice-model"
+    assert settings.resolve_tts_model("gpt-4o-mini-tts", "voice_clone") == "tts-model"
     assert settings.compose_instructions("maid", "Speak a little slower.") == (
         "Voice design: A calm maid voice.\n"
         "Additional instructions: Speak a little slower."

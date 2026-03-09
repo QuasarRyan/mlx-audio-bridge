@@ -130,6 +130,11 @@ VOICE_DESIGN_TTS_FAMILY = TTSFamilySpec(
     legacy_model="mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
     required_tokens=("Qwen3-TTS-12Hz", "1.7B", "VoiceDesign"),
 )
+LARGE_CUSTOM_VOICE_TTS_FAMILY = TTSFamilySpec(
+    public_id="Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    legacy_model="mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16",
+    required_tokens=("Qwen3-TTS-12Hz", "1.7B", "CustomVoice"),
+)
 
 
 @dataclass(slots=True, frozen=True)
@@ -138,11 +143,18 @@ class Settings:
     default_tts_model: str
     custom_voice_tts_model: str
     voice_design_tts_model: str
+    large_custom_voice_tts_model: str
     default_asr_model: str
     forced_language: str | None
     voices: VoicesConfig
 
-    def resolve_tts_model(self, public_model: str) -> str:
+    def resolve_tts_model(self, public_model: str, voice_mode: str = "voice_clone") -> str:
+        if public_model in OPENAI_TTS_ALIASES:
+            if voice_mode == "voice_design":
+                return self.voice_design_tts_model
+            if voice_mode == "custom_voice":
+                return self.custom_voice_tts_model
+            return self.default_tts_model
         return self.public_model_roots().get(public_model, public_model)
 
     def public_model_roots(self) -> dict[str, str]:
@@ -150,9 +162,11 @@ class Settings:
         public_models[DEFAULT_TTS_FAMILY.public_id] = self.default_tts_model
         public_models[CUSTOM_VOICE_TTS_FAMILY.public_id] = self.custom_voice_tts_model
         public_models[VOICE_DESIGN_TTS_FAMILY.public_id] = self.voice_design_tts_model
+        public_models[LARGE_CUSTOM_VOICE_TTS_FAMILY.public_id] = self.large_custom_voice_tts_model
         public_models[self.default_tts_model] = self.default_tts_model
         public_models[self.custom_voice_tts_model] = self.custom_voice_tts_model
         public_models[self.voice_design_tts_model] = self.voice_design_tts_model
+        public_models[self.large_custom_voice_tts_model] = self.large_custom_voice_tts_model
         return public_models
 
     def resolve_voice_config(self, requested_voice: str) -> VoiceConfig:
@@ -360,6 +374,7 @@ def load_settings() -> Settings:
         default_tts_model=_resolve_tts_model_location(),
         custom_voice_tts_model=_resolve_tts_family_location(CUSTOM_VOICE_TTS_FAMILY, model_dir=model_dir),
         voice_design_tts_model=_resolve_tts_family_location(VOICE_DESIGN_TTS_FAMILY, model_dir=model_dir),
+        large_custom_voice_tts_model=_resolve_tts_family_location(LARGE_CUSTOM_VOICE_TTS_FAMILY, model_dir=model_dir),
         default_asr_model=_resolve_model_location(
             direct_env_name="QWEN_ASR_MODEL",
             name_env_name="QWEN_ASR_MODEL_NAME",

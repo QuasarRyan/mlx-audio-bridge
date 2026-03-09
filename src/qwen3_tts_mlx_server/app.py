@@ -77,11 +77,12 @@ def create_app(settings: Settings | None = None, tts_backend: TTSBackend | None 
                 code="unsupported_stream_format",
             )
 
+        voice_mode = resolved_settings.resolve_voice_mode(request.voice)
         synthesis_request = SpeechSynthesisRequest(
             public_model=request.model,
-            backend_model=resolved_settings.resolve_tts_model(request.model),
+            backend_model=resolved_settings.resolve_tts_model(request.model, voice_mode),
             text=request.input,
-            voice_mode=resolved_settings.resolve_voice_mode(request.voice),
+            voice_mode=voice_mode,
             voice=resolved_settings.resolve_voice(request.voice),
             instructions=resolved_settings.compose_instructions(request.voice, request.instructions),
             prompt_audio_path=resolved_settings.resolve_prompt_audio_path(request.voice),

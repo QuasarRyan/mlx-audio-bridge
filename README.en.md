@@ -166,7 +166,7 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 
 | OpenAI field | Service behavior | Qwen3-TTS / MLX mapping |
 | --- | --- | --- |
-| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`), a direct MLX model id / path, and the three family ids `Qwen3-TTS-12Hz-0.6B-Base`, `Qwen3-TTS-12Hz-0.6B-CustomVoice`, and `Qwen3-TTS-12Hz-1.7B-VoiceDesign` | OpenAI aliases resolve to the default Base model; Qwen3-TTS family ids auto-select a compatible quantized local directory from `QWEN_MODEL_DIR`, or fall back to the corresponding `mlx-community` default model |
+| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`), a direct MLX model id / path, and the four family ids `Qwen3-TTS-12Hz-0.6B-Base`, `Qwen3-TTS-12Hz-0.6B-CustomVoice`, `Qwen3-TTS-12Hz-1.7B-VoiceDesign`, and `Qwen3-TTS-12Hz-1.7B-CustomVoice` | OpenAI aliases auto-select a family from the voice mode: `voice_design -> 1.7B VoiceDesign`, `custom_voice -> 0.6B CustomVoice`, `voice_clone -> 0.6B Base`. Explicit family ids auto-select a compatible quantized local directory from `QWEN_MODEL_DIR`, or fall back to the corresponding `mlx-community` default model |
 | `input` | Required text input | `text` |
 | `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice` / `prompt_audio_path` / `prompt_text` |
 | `instructions` | Combined with the `voice_design` description or request-level `instructions` and passed best-effort to the backend | `instruct` when supported |

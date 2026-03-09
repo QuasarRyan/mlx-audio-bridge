@@ -31,6 +31,7 @@ def build_client() -> tuple[TestClient, StubTTSBackend]:
         default_tts_model="mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
         custom_voice_tts_model="mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-bf16",
         voice_design_tts_model="mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
+        large_custom_voice_tts_model="mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16",
         default_asr_model="mlx-community/Qwen3-ASR-0.6B-8bit",
         forced_language=None,
         voices={
@@ -69,7 +70,7 @@ def test_speech_endpoint_maps_openai_fields_to_backend() -> None:
     assert response.content.startswith(b"RIFF")
 
     backend_call = backend.calls[0]
-    assert backend_call.backend_model == "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
+    assert backend_call.backend_model == "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16"
     assert backend_call.voice == "Chelsie"
     assert backend_call.language == "English"
     assert "Neutral and polished." in (backend_call.instructions or "")
@@ -94,6 +95,23 @@ def test_speech_endpoint_supports_voice_clone_config() -> None:
     assert backend_call.voice == ""
     assert backend_call.prompt_audio_path == "/tmp/reference.wav"
     assert backend_call.prompt_text == "Reference prompt text."
+
+
+def test_speech_endpoint_selects_model_family_from_voice_mode() -> None:
+    client, backend = build_client()
+
+    response = client.post(
+        "/v1/audio/speech",
+        json={
+            "model": "gpt-4o-mini-tts",
+            "input": "Tell a story.",
+            "voice": "alloy",
+            "response_format": "wav",
+        },
+    )
+
+    assert response.status_code == 200
+    assert backend.calls[-1].backend_model == "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16"
 
 
 def test_speech_endpoint_supports_sse_streaming() -> None:
@@ -145,3 +163,4 @@ def test_models_endpoint_lists_openai_aliases() -> None:
     assert "tts-1-hd" in model_ids
     assert "Qwen3-TTS-12Hz-0.6B-CustomVoice" in model_ids
     assert "Qwen3-TTS-12Hz-1.7B-VoiceDesign" in model_ids
+    assert "Qwen3-TTS-12Hz-1.7B-CustomVoice" in model_ids

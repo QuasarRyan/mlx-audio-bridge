@@ -27,6 +27,8 @@ Reserved for future Qwen-ASR integration:
 Python 3.10-3.13 is required. The runtime environment must be macOS on Apple silicon.
 
 ```bash
+brew install uv
+cd /opt && git clone https://github.com/QuasarRyan/mlx-audio-bridge.git && cd mlx-audio-bridge
 UV_CACHE_DIR=.uv-cache UV_PROJECT_ENVIRONMENT=.venv uv sync --extra dev
 ```
 

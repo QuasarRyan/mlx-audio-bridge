@@ -29,6 +29,8 @@ Or in English: [README.en.md](./README.en.md)。
 需要 Python 3.10 到 3.13，且运行环境必须是搭载 Apple silicon 的 macOS。
 
 ```bash
+brew install uv
+cd /opt && git clone https://github.com/QuasarRyan/mlx-audio-bridge.git && cd mlx-audio-bridge
 UV_CACHE_DIR=.uv-cache UV_PROJECT_ENVIRONMENT=.venv uv sync --extra dev
 ```
 

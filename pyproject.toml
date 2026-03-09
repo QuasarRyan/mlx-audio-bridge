@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qwen3-tts-mlx-openai"
+version = "0.1.0"
+description = "OpenAI-compatible REST service backed by MLX Qwen3-TTS."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "fastapi>=0.115.0,<1.0.0",
+  "numpy>=1.26.0,<3.0.0",
+  "pydantic>=2.7.0,<3.0.0",
+  "python-multipart>=0.0.9,<1.0.0",
+  "transformers==5.0.0rc3; sys_platform == 'darwin'",
+  "uvicorn[standard]>=0.30.0,<1.0.0",
+  "mlx-audio>=0.3.1; sys_platform == 'darwin'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28.0,<1.0.0",
+  "pytest>=8.3.0,<9.0.0",
+]
+
+[project.scripts]
+qwen3-tts-mlx-server = "qwen3_tts_mlx_server.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

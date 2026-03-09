@@ -168,8 +168,8 @@ If your model layout looks like this:
 
 ```text
 /opt/mlx-audio-bridge/models/
-  Qwen3-TTS-12Hz-0.6B-Base-bf16/
-  Qwen3-ASR-0.6B-8bit/
+├── Qwen3-TTS-12Hz-0.6B-Base-bf16/
+└── Qwen3-ASR-0.6B-8bit/
 ```
 
 then setting `QWEN_MODEL_DIR=/opt/mlx-audio-bridge/models` is enough.

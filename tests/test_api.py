@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from qwen3_tts_mlx_server.app import create_app
 from qwen3_tts_mlx_server.backends import SpeechSynthesisRequest, SynthesizedAudio, TTSBackend
+from qwen3_tts_mlx_server.backends.qwen_tts import QwenMLXTTSBackend
 from qwen3_tts_mlx_server.settings import Settings
 
 
@@ -164,3 +165,38 @@ def test_models_endpoint_lists_openai_aliases() -> None:
     assert "Qwen3-TTS-12Hz-0.6B-CustomVoice" in model_ids
     assert "Qwen3-TTS-12Hz-1.7B-VoiceDesign" in model_ids
     assert "Qwen3-TTS-12Hz-1.7B-CustomVoice" in model_ids
+
+
+def test_backend_refreshes_tokenizer_with_fixed_mistral_regex(monkeypatch) -> None:
+    recorded: dict[str, object] = {}
+
+    class DummyTokenizer:
+        pass
+
+    class DummyAutoTokenizer:
+        @staticmethod
+        def from_pretrained(path: str, **kwargs):
+            recorded["path"] = path
+            recorded["kwargs"] = kwargs
+            return DummyTokenizer()
+
+    dummy_model = type(
+        "DummyModel",
+        (),
+        {
+            "tokenizer": object(),
+            "config": type("DummyConfig", (), {"model_path": "/opt/mlx-audio-bridge/models/Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit"})(),
+        },
+    )()
+
+    import qwen3_tts_mlx_server.backends.qwen_tts as backend_module
+
+    monkeypatch.setattr(backend_module, "AutoTokenizer", DummyAutoTokenizer, raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "transformers", type("DummyTransformers", (), {"AutoTokenizer": DummyAutoTokenizer})())
+
+    backend = QwenMLXTTSBackend()
+    backend._refresh_tokenizer(dummy_model, "ignored-model-id")
+
+    assert isinstance(dummy_model.tokenizer, DummyTokenizer)
+    assert recorded["path"] == "/opt/mlx-audio-bridge/models/Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit"
+    assert recorded["kwargs"] == {"fix_mistral_regex": True}

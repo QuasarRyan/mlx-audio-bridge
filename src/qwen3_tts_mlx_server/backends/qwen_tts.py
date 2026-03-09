@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import threading
+import warnings
 from collections.abc import Iterable
 from typing import Any
 
@@ -42,9 +44,37 @@ class QwenMLXTTSBackend(TTSBackend):
                     code="mlx_audio_missing",
                 ) from exc
 
-            model = load_model(model_id)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message=r"You are using a model of type qwen3_tts to instantiate a model of type .*",
+                )
+                model = load_model(model_id)
+
+            self._refresh_tokenizer(model=model, model_id=model_id)
             self._models[model_id] = model
             return model
+
+    def _refresh_tokenizer(self, model: Any, model_id: str) -> None:
+        if not hasattr(model, "tokenizer"):
+            return
+
+        try:
+            from transformers import AutoTokenizer
+        except ImportError:
+            return
+
+        model_path = getattr(getattr(model, "config", None), "model_path", model_id)
+        try:
+            model.tokenizer = AutoTokenizer.from_pretrained(
+                str(model_path),
+                fix_mistral_regex=True,
+            )
+        except TypeError:
+            # Older/newer transformers builds may not expose fix_mistral_regex.
+            model.tokenizer = AutoTokenizer.from_pretrained(str(model_path))
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Failed to reload tokenizer for %s: %s", model_id, exc)
 
     def _generate(self, model: Any, request: SpeechSynthesisRequest) -> tuple[np.ndarray, int]:
         generate_kwargs: dict[str, Any] = {

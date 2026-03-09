@@ -91,6 +91,7 @@ First-time installation:
 
 ```bash
 sudo mkdir -p /opt/mlx-audio-bridge/run /opt/mlx-audio-bridge/models /opt/mlx-audio-bridge/config
+sudo cp /opt/mlx-audio-bridge/deploy/voices.json /opt/mlx-audio-bridge/deploy
 sudo cp /opt/mlx-audio-bridge/deploy/com.quasarryan.mlxaudio.api.plist /Library/LaunchDaemons/
 sudo plutil -lint /Library/LaunchDaemons/com.quasarryan.mlxaudio.api.plist
 sudo launchctl bootstrap system /Library/LaunchDaemons/com.quasarryan.mlxaudio.api.plist

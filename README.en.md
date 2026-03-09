@@ -82,7 +82,7 @@ Before loading it, update at least:
 - `BIND_ADDRESS`, which defaults to `127.0.0.1`
 - `PORT`, which defaults to `8008`
 - `QWEN_MODEL_DIR`, which defaults to `/opt/mlx-audio-bridge/models`
-- Add `QWEN_TTS_MODEL_NAME` / `QWEN_ASR_MODEL_NAME` only if your subdirectory names differ from the defaults
+- Add `QWEN_TTS_MODEL_NAME` / `QWEN_ASR_MODEL_NAME` only if you want to bypass auto-selection
 - Any absolute paths that differ on your machine
 
 If you want the service to be reachable from other machines, change `BIND_ADDRESS` to `0.0.0.0`.
@@ -166,7 +166,7 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 
 | OpenAI field | Service behavior | Qwen3-TTS / MLX mapping |
 | --- | --- | --- |
-| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`) or a direct MLX model id / path | OpenAI aliases resolve through `QWEN_MODEL_DIR` + `QWEN_TTS_MODEL_NAME`, or pass through directly |
+| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`), a direct MLX model id / path, and the three family ids `Qwen3-TTS-12Hz-0.6B-Base`, `Qwen3-TTS-12Hz-0.6B-CustomVoice`, and `Qwen3-TTS-12Hz-1.7B-VoiceDesign` | OpenAI aliases resolve to the default Base model; Qwen3-TTS family ids auto-select a compatible quantized local directory from `QWEN_MODEL_DIR`, or fall back to the corresponding `mlx-community` default model |
 | `input` | Required text input | `text` |
 | `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice` / `prompt_audio_path` / `prompt_text` |
 | `instructions` | Combined with the `voice_design` description or request-level `instructions` and passed best-effort to the backend | `instruct` when supported |
@@ -184,7 +184,7 @@ The main gap is language: OpenAI TTS does not expose a `language` field, while Q
 | `BIND_ADDRESS` | `127.0.0.1` | Listener address; set this to `0.0.0.0` if you want to allow external access |
 | `PORT` | `8008` | Listener port |
 | `QWEN_MODEL_DIR` | `/opt/mlx-audio-bridge/models` | Shared root directory for local TTS and STT models |
-| `QWEN_TTS_MODEL_NAME` | `Qwen3-TTS-12Hz-0.6B-Base-bf16` | TTS model subdirectory name |
+| `QWEN_TTS_MODEL_NAME` | empty | Optional TTS model subdirectory name. If unset, the service auto-selects a compatible local `Qwen3-TTS-12Hz Base 0.6B` directory from `QWEN_MODEL_DIR` in this order: `8bit`, `6bit`, `5bit`, `4bit`, `bf16` |
 | `QWEN_ASR_MODEL_NAME` | `Qwen3-ASR-0.6B-8bit` | Reserved STT model subdirectory name |
 | `QWEN_TTS_MODEL` | empty | Backward-compatible direct override for a TTS model path or Hugging Face model id |
 | `QWEN_ASR_MODEL` | empty | Backward-compatible direct override for an STT model path or Hugging Face model id |
@@ -194,11 +194,12 @@ If your model layout looks like this:
 
 ```text
 /opt/mlx-audio-bridge/models/
-├── Qwen3-TTS-12Hz-0.6B-Base-bf16/
+├── Qwen3-TTS-12Hz-Base-0.6B-8bit/
+├── Qwen3-TTS-12Hz-Base-0.6B-4bit/
 └── Qwen3-ASR-0.6B-8bit/
 ```
 
-then setting `QWEN_MODEL_DIR=/opt/mlx-audio-bridge/models` is enough.
+then setting `QWEN_MODEL_DIR=/opt/mlx-audio-bridge/models` is enough. The service prefers `8bit`, then falls back through `6bit`, `5bit`, `4bit`, and `bf16`.
 
 For compatibility with OpenAI voices such as `alloy`, `ash`, and `nova`, the service includes built-in defaults that approximate the official voice intent. The actual generated sound is still the final source of truth.
 

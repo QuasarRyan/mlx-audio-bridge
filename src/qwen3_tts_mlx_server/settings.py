@@ -15,6 +15,7 @@ DEFAULT_TTS_MODEL_NAME = "Qwen3-TTS-12Hz-0.6B-Base-bf16"
 DEFAULT_ASR_MODEL_NAME = "Qwen3-ASR-0.6B-8bit"
 LEGACY_DEFAULT_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
 LEGACY_DEFAULT_ASR_MODEL = "mlx-community/Qwen3-ASR-0.6B-8bit"
+TTS_QUANTIZATION_PREFERENCE = ("8bit", "6bit", "5bit", "4bit", "bf16")
 OPENAI_TTS_ALIASES = ("gpt-4o-mini-tts", "tts-1", "tts-1-hd")
 OPENAI_STT_ALIASES = ("gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1")
 
@@ -108,9 +109,35 @@ _HANGUL_RE = re.compile(r"[\uac00-\ud7af]")
 
 
 @dataclass(slots=True, frozen=True)
+class TTSFamilySpec:
+    public_id: str
+    legacy_model: str
+    required_tokens: tuple[str, ...]
+
+
+DEFAULT_TTS_FAMILY = TTSFamilySpec(
+    public_id="Qwen3-TTS-12Hz-0.6B-Base",
+    legacy_model=LEGACY_DEFAULT_TTS_MODEL,
+    required_tokens=("Qwen3-TTS-12Hz", "0.6B", "Base"),
+)
+CUSTOM_VOICE_TTS_FAMILY = TTSFamilySpec(
+    public_id="Qwen3-TTS-12Hz-0.6B-CustomVoice",
+    legacy_model="mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-bf16",
+    required_tokens=("Qwen3-TTS-12Hz", "0.6B", "CustomVoice"),
+)
+VOICE_DESIGN_TTS_FAMILY = TTSFamilySpec(
+    public_id="Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    legacy_model="mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
+    required_tokens=("Qwen3-TTS-12Hz", "1.7B", "VoiceDesign"),
+)
+
+
+@dataclass(slots=True, frozen=True)
 class Settings:
     api_key: str | None
     default_tts_model: str
+    custom_voice_tts_model: str
+    voice_design_tts_model: str
     default_asr_model: str
     forced_language: str | None
     voices: VoicesConfig
@@ -120,7 +147,12 @@ class Settings:
 
     def public_model_roots(self) -> dict[str, str]:
         public_models = {alias: self.default_tts_model for alias in OPENAI_TTS_ALIASES}
+        public_models[DEFAULT_TTS_FAMILY.public_id] = self.default_tts_model
+        public_models[CUSTOM_VOICE_TTS_FAMILY.public_id] = self.custom_voice_tts_model
+        public_models[VOICE_DESIGN_TTS_FAMILY.public_id] = self.voice_design_tts_model
         public_models[self.default_tts_model] = self.default_tts_model
+        public_models[self.custom_voice_tts_model] = self.custom_voice_tts_model
+        public_models[self.voice_design_tts_model] = self.voice_design_tts_model
         return public_models
 
     def resolve_voice_config(self, requested_voice: str) -> VoiceConfig:
@@ -257,15 +289,77 @@ def _resolve_model_location(
     return str(Path(model_dir) / model_name)
 
 
+def _normalize_identifier(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def _matches_preferred_tts_model(path: Path, family: TTSFamilySpec, quantization: str) -> bool:
+    name = _normalize_identifier(path.name)
+    return (
+        path.is_dir()
+        and all(_normalize_identifier(token) in name for token in family.required_tokens)
+        and _normalize_identifier(quantization) in name
+    )
+
+
+def _discover_preferred_tts_model(model_dir: str, family: TTSFamilySpec) -> str | None:
+    root = Path(model_dir)
+    if not model_dir or not root.is_dir():
+        return None
+
+    try:
+        entries = sorted(root.iterdir(), key=lambda item: item.name)
+    except OSError:
+        return None
+
+    for quantization in TTS_QUANTIZATION_PREFERENCE:
+        for entry in entries:
+            if _matches_preferred_tts_model(entry, family, quantization):
+                return str(entry)
+    return None
+
+
+def _resolve_tts_family_location(
+    family: TTSFamilySpec,
+    *,
+    model_dir: str,
+    explicit_model_name: str | None = None,
+) -> str:
+    if explicit_model_name is not None:
+        if not explicit_model_name:
+            return family.legacy_model
+        if Path(explicit_model_name).is_absolute() or "/" in explicit_model_name:
+            return explicit_model_name
+        return str(Path(model_dir) / explicit_model_name)
+
+    discovered = _discover_preferred_tts_model(model_dir, family)
+    if discovered:
+        return discovered
+    return family.legacy_model
+
+
+def _resolve_tts_model_location() -> str:
+    direct_value = os.getenv("QWEN_TTS_MODEL")
+    if direct_value:
+        return direct_value
+
+    model_dir = os.getenv("QWEN_MODEL_DIR", DEFAULT_MODEL_DIR).strip()
+    explicit_model_name = os.getenv("QWEN_TTS_MODEL_NAME")
+    return _resolve_tts_family_location(
+        DEFAULT_TTS_FAMILY,
+        model_dir=model_dir,
+        explicit_model_name=explicit_model_name.strip() if explicit_model_name is not None else None,
+    )
+
+
 def load_settings() -> Settings:
+    model_dir = os.getenv("QWEN_MODEL_DIR", DEFAULT_MODEL_DIR).strip()
+
     return Settings(
         api_key=os.getenv("API_KEY"),
-        default_tts_model=_resolve_model_location(
-            direct_env_name="QWEN_TTS_MODEL",
-            name_env_name="QWEN_TTS_MODEL_NAME",
-            default_model_name=DEFAULT_TTS_MODEL_NAME,
-            legacy_default_model=LEGACY_DEFAULT_TTS_MODEL,
-        ),
+        default_tts_model=_resolve_tts_model_location(),
+        custom_voice_tts_model=_resolve_tts_family_location(CUSTOM_VOICE_TTS_FAMILY, model_dir=model_dir),
+        voice_design_tts_model=_resolve_tts_family_location(VOICE_DESIGN_TTS_FAMILY, model_dir=model_dir),
         default_asr_model=_resolve_model_location(
             direct_env_name="QWEN_ASR_MODEL",
             name_env_name="QWEN_ASR_MODEL_NAME",

@@ -30,6 +30,43 @@ def test_load_settings_keeps_legacy_direct_model_overrides(monkeypatch) -> None:
     assert settings.default_asr_model == "/tmp/custom-asr"
 
 
+def test_load_settings_prefers_highest_supported_local_tts_quantization(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("QWEN_TTS_MODEL", raising=False)
+    monkeypatch.delenv("QWEN_TTS_MODEL_NAME", raising=False)
+    monkeypatch.setenv("QWEN_MODEL_DIR", str(tmp_path))
+    (tmp_path / "Qwen3-TTS-12Hz-Base-0.6B-4bit").mkdir()
+    (tmp_path / "Qwen3-TTS-12Hz-Base-0.6B-8bit").mkdir()
+    (tmp_path / "Qwen3-TTS-12Hz-Base-0.6B-bf16").mkdir()
+
+    settings = load_settings()
+
+    assert settings.default_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-Base-0.6B-8bit")
+
+
+def test_load_settings_falls_back_to_legacy_tts_model_when_no_local_quantization_exists(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("QWEN_TTS_MODEL", raising=False)
+    monkeypatch.delenv("QWEN_TTS_MODEL_NAME", raising=False)
+    monkeypatch.setenv("QWEN_MODEL_DIR", str(tmp_path))
+
+    settings = load_settings()
+
+    assert settings.default_tts_model == "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
+
+
+def test_load_settings_resolves_other_supported_tts_families(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("QWEN_TTS_MODEL", raising=False)
+    monkeypatch.delenv("QWEN_TTS_MODEL_NAME", raising=False)
+    monkeypatch.setenv("QWEN_MODEL_DIR", str(tmp_path))
+    (tmp_path / "Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit").mkdir()
+    (tmp_path / "Qwen3-TTS-12Hz-1.7B-VoiceDesign-5bit").mkdir()
+    (tmp_path / "Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit").mkdir()
+
+    settings = load_settings()
+
+    assert settings.custom_voice_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-0.6B-CustomVoice-6bit")
+    assert settings.voice_design_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit")
+
+
 def test_load_settings_reads_voice_overrides_from_file(monkeypatch, tmp_path) -> None:
     voices_file = tmp_path / "voices.json"
     voices_file.write_text(json.dumps({"alloy": {"mode": "voice_design", "voice_description": "Calm and bright."}}), encoding="utf-8")
@@ -56,6 +93,8 @@ def test_voice_modes_resolve_backend_voice_and_prompt_fields() -> None:
     settings = Settings(
         api_key=None,
         default_tts_model="tts-model",
+        custom_voice_tts_model="custom-voice-model",
+        voice_design_tts_model="voice-design-model",
         default_asr_model="asr-model",
         forced_language=None,
         voices={

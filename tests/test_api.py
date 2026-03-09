@@ -29,6 +29,8 @@ def build_client() -> tuple[TestClient, StubTTSBackend]:
     settings = Settings(
         api_key=None,
         default_tts_model="mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
+        custom_voice_tts_model="mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-bf16",
+        voice_design_tts_model="mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
         default_asr_model="mlx-community/Qwen3-ASR-0.6B-8bit",
         forced_language=None,
         voices={
@@ -141,3 +143,5 @@ def test_models_endpoint_lists_openai_aliases() -> None:
     assert "gpt-4o-mini-tts" in model_ids
     assert "tts-1" in model_ids
     assert "tts-1-hd" in model_ids
+    assert "Qwen3-TTS-12Hz-0.6B-CustomVoice" in model_ids
+    assert "Qwen3-TTS-12Hz-1.7B-VoiceDesign" in model_ids

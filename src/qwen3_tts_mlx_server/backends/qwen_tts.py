@@ -17,6 +17,8 @@ class QwenMLXTTSBackend(TTSBackend):
     _DEFAULT_TEMPERATURE = 0.6
     _DEFAULT_TOP_P = 0.9
     _DEFAULT_TOP_K = 30
+    _DEFAULT_REPETITION_PENALTY = 1.05
+    _ICL_REPETITION_PENALTY_FLOOR = 1.5
 
     def __init__(self, default_sample_rate: int = 24_000) -> None:
         self._default_sample_rate = default_sample_rate
@@ -95,6 +97,13 @@ class QwenMLXTTSBackend(TTSBackend):
             "top_p": self._DEFAULT_TOP_P,
             "top_k": self._DEFAULT_TOP_K,
         }
+        repetition_penalty = request.repetition_penalty
+        if repetition_penalty is None:
+            repetition_penalty = self._DEFAULT_REPETITION_PENALTY
+        if request.voice_mode == "voice_clone" and repetition_penalty < self._ICL_REPETITION_PENALTY_FLOOR:
+            repetition_penalty = self._ICL_REPETITION_PENALTY_FLOOR
+        if not generate_parameters or "repetition_penalty" in generate_parameters:
+            generate_kwargs["repetition_penalty"] = repetition_penalty
         if request.voice:
             generate_kwargs["voice"] = request.voice
         if request.language:

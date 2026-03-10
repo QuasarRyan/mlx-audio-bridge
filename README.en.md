@@ -173,6 +173,7 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 | `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice`; `voice_clone` config still uses `prompt_audio_path` / `prompt_text`, and the service maps them to the current `mlx-audio` `ref_audio` / `ref_text` inputs at runtime |
 | `instructions` | Combined with the `voice_design` description or request-level `instructions` and passed best-effort to the backend | `instruct` when supported |
 | `speed` | Range validated like OpenAI | `speed` |
+| `repetition_penalty` | Optional, default `1.05`. On the Base-model ICL voice-clone path (`voice_clone`), values below `1.5` are automatically raised to `1.5` | `repetition_penalty` |
 | `response_format` | Encoded to `mp3`, `opus`, `aac`, `flac`, `wav`, or `pcm` | Post-processed response audio |
 | `stream_format=sse` | Returns OpenAI-style `speech.audio.delta` / `speech.audio.done` SSE events | Service-side chunked stream |
 
@@ -180,7 +181,7 @@ For OpenAI client compatibility, model names such as `gpt-4o-mini-tts`, `tts-1`,
 
 The main gap is language: OpenAI TTS does not expose a `language` field, while Qwen3-TTS benefits from one. The service infers a best-effort language from the input script and falls back to `English`. Override with `QWEN_TTS_LANGUAGE`.
 
-The service also pins a stability-oriented set of Qwen3-TTS sampling defaults: `temperature=0.6`, `top_p=0.9`, and `top_k=30`. `repetition_penalty` is still left to the backend default behavior; on the current `mlx-audio` Base-model ICL voice-clone path it is internally raised to at least `1.5`.
+The service also pins a stability-oriented set of Qwen3-TTS sampling defaults: `temperature=0.6`, `top_p=0.9`, and `top_k=30`. `repetition_penalty` is now wired as well, with a default of `1.05`. On the Base-model ICL voice-clone path (`voice_clone`), any value below `1.5` is raised to `1.5`, so values under `1.5` are effectively meaningless in that scenario.
 
 ## Configuration
 

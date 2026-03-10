@@ -89,6 +89,7 @@ def create_app(settings: Settings | None = None, tts_backend: TTSBackend | None 
             prompt_text=resolved_settings.resolve_prompt_text(request.voice),
             language=resolved_settings.infer_language(request.input),
             speed=request.speed,
+            repetition_penalty=request.repetition_penalty,
             response_format=request.response_format,
         )
         synthesized = await run_in_threadpool(resolved_backend.synthesize, synthesis_request)

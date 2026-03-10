@@ -115,6 +115,66 @@ def test_speech_endpoint_selects_model_family_from_voice_mode() -> None:
     assert backend.calls[-1].backend_model == "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16"
 
 
+def test_speech_endpoint_forwards_repetition_penalty() -> None:
+    client, backend = build_client()
+
+    response = client.post(
+        "/v1/audio/speech",
+        json={
+            "model": "gpt-4o-mini-tts",
+            "input": "Repeat-safe text.",
+            "voice": "alloy",
+            "response_format": "wav",
+            "repetition_penalty": 1.2,
+        },
+    )
+
+    assert response.status_code == 200
+    assert backend.calls[-1].repetition_penalty == 1.2
+
+
+def test_backend_enforces_repetition_penalty_floor_for_voice_clone() -> None:
+    backend = QwenMLXTTSBackend()
+    captured: dict[str, float] = {}
+
+    class DummyModel:
+        def generate(
+            self,
+            *,
+            text: str,
+            speed: float,
+            temperature: float,
+            top_p: float,
+            top_k: int,
+            repetition_penalty: float,
+            **kwargs,
+        ):
+            _ = (text, speed, temperature, top_p, top_k, kwargs)
+            captured["repetition_penalty"] = repetition_penalty
+            return np.zeros(10, dtype=np.float32), 24_000
+
+    request = SpeechSynthesisRequest(
+        public_model="gpt-4o-mini-tts",
+        backend_model="mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
+        text="Clone this voice.",
+        voice_mode="voice_clone",
+        voice="",
+        instructions=None,
+        prompt_audio_path="/tmp/reference.wav",
+        prompt_text="Reference prompt text.",
+        language="English",
+        speed=1.0,
+        repetition_penalty=1.1,
+        response_format="wav",
+    )
+
+    audio, sample_rate = backend._generate(DummyModel(), request)
+
+    assert sample_rate == 24_000
+    assert len(audio) == 10
+    assert captured["repetition_penalty"] == 1.5
+
+
 def test_speech_endpoint_supports_sse_streaming() -> None:
     client, _ = build_client()
 

@@ -18,6 +18,7 @@ class SpeechSynthesisRequest:
     prompt_text: str | None
     language: str | None
     speed: float
+    repetition_penalty: float | None
     response_format: str
 
 

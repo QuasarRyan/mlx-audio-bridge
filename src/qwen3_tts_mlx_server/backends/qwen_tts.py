@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging
 import threading
 import warnings
@@ -13,6 +14,10 @@ from .base import SpeechSynthesisRequest, SynthesizedAudio, TTSBackend
 
 
 class QwenMLXTTSBackend(TTSBackend):
+    _DEFAULT_TEMPERATURE = 0.6
+    _DEFAULT_TOP_P = 0.9
+    _DEFAULT_TOP_K = 30
+
     def __init__(self, default_sample_rate: int = 24_000) -> None:
         self._default_sample_rate = default_sample_rate
         self._models: dict[str, Any] = {}
@@ -77,20 +82,32 @@ class QwenMLXTTSBackend(TTSBackend):
             logging.getLogger(__name__).warning("Failed to reload tokenizer for %s: %s", model_id, exc)
 
     def _generate(self, model: Any, request: SpeechSynthesisRequest) -> tuple[np.ndarray, int]:
+        try:
+            generate_signature = inspect.signature(model.generate)
+            generate_parameters = set(generate_signature.parameters)
+        except (TypeError, ValueError):
+            generate_parameters = set()
+
         generate_kwargs: dict[str, Any] = {
             "text": request.text,
             "speed": request.speed,
+            "temperature": self._DEFAULT_TEMPERATURE,
+            "top_p": self._DEFAULT_TOP_P,
+            "top_k": self._DEFAULT_TOP_K,
         }
         if request.voice:
             generate_kwargs["voice"] = request.voice
         if request.language:
-            generate_kwargs["language"] = request.language
+            language_param = "lang_code" if "lang_code" in generate_parameters else "language"
+            generate_kwargs[language_param] = request.language
         if request.instructions:
             generate_kwargs["instruct"] = request.instructions
         if request.prompt_audio_path:
-            generate_kwargs["prompt_audio_path"] = request.prompt_audio_path
+            audio_prompt_param = "ref_audio" if "ref_audio" in generate_parameters else "prompt_audio_path"
+            generate_kwargs[audio_prompt_param] = request.prompt_audio_path
         if request.prompt_text:
-            generate_kwargs["prompt_text"] = request.prompt_text
+            text_prompt_param = "ref_text" if "ref_text" in generate_parameters else "prompt_text"
+            generate_kwargs[text_prompt_param] = request.prompt_text
 
         try:
             raw_result = model.generate(**generate_kwargs)
@@ -99,7 +116,7 @@ class QwenMLXTTSBackend(TTSBackend):
                 raise OpenAIHTTPException(
                     status_code=501,
                     message=(
-                        "The current mlx-audio backend does not expose the prompt-audio inputs required "
+                        "The current mlx-audio backend does not expose the reference-audio inputs required "
                         "for voice_clone mode."
                     ),
                     error_type="server_error",

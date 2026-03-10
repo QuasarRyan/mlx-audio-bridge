@@ -170,7 +170,7 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 | --- | --- | --- |
 | `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`), a direct MLX model id / path, and the four family ids `Qwen3-TTS-12Hz-0.6B-Base`, `Qwen3-TTS-12Hz-0.6B-CustomVoice`, `Qwen3-TTS-12Hz-1.7B-VoiceDesign`, and `Qwen3-TTS-12Hz-1.7B-CustomVoice` | OpenAI aliases auto-select a family from the voice mode: `voice_design -> 1.7B VoiceDesign`, `custom_voice -> 0.6B CustomVoice`, `voice_clone -> 0.6B Base`. Explicit family ids auto-select a compatible quantized local directory from `QWEN_MODEL_DIR`, or fall back to the corresponding `mlx-community` default model |
 | `input` | Required text input | `text` |
-| `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice` / `prompt_audio_path` / `prompt_text` |
+| `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice`; `voice_clone` config still uses `prompt_audio_path` / `prompt_text`, and the service maps them to the current `mlx-audio` `ref_audio` / `ref_text` inputs at runtime |
 | `instructions` | Combined with the `voice_design` description or request-level `instructions` and passed best-effort to the backend | `instruct` when supported |
 | `speed` | Range validated like OpenAI | `speed` |
 | `response_format` | Encoded to `mp3`, `opus`, `aac`, `flac`, `wav`, or `pcm` | Post-processed response audio |
@@ -179,6 +179,8 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 For OpenAI client compatibility, model names such as `gpt-4o-mini-tts`, `tts-1`, and `tts-1-hd` are kept mainly as compatibility entry points. The service then chooses an appropriate Qwen3-TTS model family based on the selected voice capability type so it can balance compatibility, voice features, and output quality.
 
 The main gap is language: OpenAI TTS does not expose a `language` field, while Qwen3-TTS benefits from one. The service infers a best-effort language from the input script and falls back to `English`. Override with `QWEN_TTS_LANGUAGE`.
+
+The service also pins a stability-oriented set of Qwen3-TTS sampling defaults: `temperature=0.6`, `top_p=0.9`, and `top_k=30`. `repetition_penalty` is still left to the backend default behavior; on the current `mlx-audio` Base-model ICL voice-clone path it is internally raised to at least `1.5`.
 
 ## Configuration
 
@@ -214,7 +216,7 @@ If you want to override those defaults, or add Qwen3-TTS built-in speakers, voic
 - `custom_voice`
   Directly select a Qwen3-TTS speaker such as `Vivian` or `Serena`.
 - `voice_clone`
-  Provide a reference clip via `prompt_audio_path` and its transcript via `prompt_text`.
+  Provide a reference clip via `prompt_audio_path` and its transcript via `prompt_text`. The service maps them to `mlx-audio` `ref_audio` / `ref_text`, and Base-model voice cloning currently uses the ICL path, so the transcript should match the reference audio as closely as possible.
 
 Example:
 

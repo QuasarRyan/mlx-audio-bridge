@@ -265,7 +265,7 @@ Qwen3-TTS 采样参数的默认值是：`temperature=0.6`、`top_p=0.9`、`top_k
   },
   "assistant": {
     "mode": "voice_clone",
-    "prompt_audio_path": "这里填你的参考音频的路径",
+    "prompt_audio_path": "/opt/mlx-audio-bridge/references/example.wav",
     "prompt_text": "这里填你的参考文本，建议与参考音频内容一致"
   }
 }

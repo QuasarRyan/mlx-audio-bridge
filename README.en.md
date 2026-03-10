@@ -263,7 +263,7 @@ Example:
   },
   "assistant": {
     "mode": "voice_clone",
-    "prompt_audio_path": "path of your reference audio",
+    "prompt_audio_path": "/opt/mlx-audio-bridge/references/example.wav",
     "prompt_text": "accurate content of your reference audio"
   }
 }

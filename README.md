@@ -227,6 +227,21 @@ Qwen3-TTS 采样参数的默认值是：`temperature=0.6`、`top_p=0.9`、`top_k
   使用一段较长的 `voice_description` 描述目标音色，服务会把它拼进提示词。
 - `custom_voice`
   直接指定 Qwen3-TTS 的内置 speaker，例如 `Vivian`、`Serena`。
+
+  `custom_voice` 预设发言人可参考：
+
+| 预设发言人 | 音色描述 | 母语设定 | 方言/风格倾向 |
+| :--- | :--- | :--- | :--- |
+| `Vivian` | 明亮、略带锋芒的年轻女性 | 中文 | 现代主流风格 |
+| `Serena` | 温暖、柔和的年轻女性 | 中文 | 亲和力驱动 |
+| `Uncle_Fu` | 经验丰富的成熟男性 | 中文 | 低沉稳重 |
+| `Dylan` | 阳光北京男青年 | 中文 | 北京话方言特质 |
+| `Eric` | 充满活力的成都男性 | 中文 | 略带沙哑的四川方言 |
+| `Ryan` | 动感、节奏感强的男性 | 英文 | 强表现力叙述 |
+| `Aiden` | 阳光美国男性 | 英文 | 清晰的中频表现 |
+| `Ono_Anna` | 活泼的日本女性 | 日文 | 轻盈敏捷 |
+| `Sohee` | 温暖的韩国女性 | 韩文 | 情感丰富 |
+
 - `voice_clone`
   提供参考音频 `prompt_audio_path` 和对应文本 `prompt_text`。当前服务会把它映射到 `mlx-audio` 的 `ref_audio` / `ref_text`，Base 模型语音克隆走的是 ICL 路径，因此参考文本尽量与参考音频逐字对应。
 

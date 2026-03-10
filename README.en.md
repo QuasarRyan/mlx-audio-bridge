@@ -225,6 +225,21 @@ If you want to override those defaults, or add Qwen3-TTS built-in speakers, voic
   Provide a longer `voice_description` and the service will fold it into the prompt.
 - `custom_voice`
   Directly select a Qwen3-TTS speaker such as `Vivian` or `Serena`.
+
+  `custom_voice` preset speakers:
+
+| Preset speaker | Voice profile | Native language | Dialect / style tendency |
+| :--- | :--- | :--- | :--- |
+| `Vivian` | Bright young female voice with a slightly sharp edge | Chinese | Modern mainstream style |
+| `Serena` | Warm, soft young female voice | Chinese | Affinity-driven delivery |
+| `Uncle_Fu` | Experienced mature male voice | Chinese | Low and steady tone |
+| `Dylan` | Sunny young Beijing male voice | Chinese | Beijing dialect traits |
+| `Eric` | Energetic Chengdu male voice | Chinese | Slightly husky Sichuan dialect flavor |
+| `Ryan` | Dynamic, rhythm-forward male voice | English | High-expressiveness narration |
+| `Aiden` | Sunny American male voice | English | Clear mid-frequency presence |
+| `Ono_Anna` | Lively Japanese female voice | Japanese | Light and agile |
+| `Sohee` | Warm Korean female voice | Korean | Emotion-rich delivery |
+
 - `voice_clone`
   Provide a reference clip via `prompt_audio_path` and its transcript via `prompt_text`. The service maps them to `mlx-audio` `ref_audio` / `ref_text`, and Base-model voice cloning currently uses the ICL path, so the transcript should match the reference audio as closely as possible.
 

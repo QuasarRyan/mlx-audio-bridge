@@ -39,6 +39,10 @@ def build_client() -> tuple[TestClient, StubTTSBackend]:
             "alloy": {
                 "mode": "voice_design",
                 "voice_description": "Neutral and polished.",
+                "temperature": 0.72,
+                "top_p": 0.86,
+                "top_k": 42,
+                "repetition_penalty": 1.18,
             },
             "assistant": {
                 "mode": "voice_clone",
@@ -76,6 +80,10 @@ def test_speech_endpoint_maps_openai_fields_to_backend() -> None:
     assert backend_call.language == "English"
     assert "Neutral and polished." in (backend_call.instructions or "")
     assert "Speak slowly." in (backend_call.instructions or "")
+    assert backend_call.temperature == 0.72
+    assert backend_call.top_p == 0.86
+    assert backend_call.top_k == 42
+    assert backend_call.repetition_penalty == 1.18
 
 
 def test_speech_endpoint_supports_voice_clone_config() -> None:
@@ -96,6 +104,10 @@ def test_speech_endpoint_supports_voice_clone_config() -> None:
     assert backend_call.voice == ""
     assert backend_call.prompt_audio_path == "/tmp/reference.wav"
     assert backend_call.prompt_text == "Reference prompt text."
+    assert backend_call.temperature == 0.6
+    assert backend_call.top_p == 0.9
+    assert backend_call.top_k == 30
+    assert backend_call.repetition_penalty == 1.05
 
 
 def test_speech_endpoint_selects_model_family_from_voice_mode() -> None:
@@ -125,12 +137,12 @@ def test_speech_endpoint_forwards_repetition_penalty() -> None:
             "input": "Repeat-safe text.",
             "voice": "alloy",
             "response_format": "wav",
-            "repetition_penalty": 1.2,
+            "repetition_penalty": 1.35,
         },
     )
 
     assert response.status_code == 200
-    assert backend.calls[-1].repetition_penalty == 1.2
+    assert backend.calls[-1].repetition_penalty == 1.35
 
 
 def test_backend_enforces_repetition_penalty_floor_for_voice_clone() -> None:
@@ -164,6 +176,9 @@ def test_backend_enforces_repetition_penalty_floor_for_voice_clone() -> None:
         prompt_text="Reference prompt text.",
         language="English",
         speed=1.0,
+        temperature=None,
+        top_p=None,
+        top_k=None,
         repetition_penalty=1.1,
         response_format="wav",
     )

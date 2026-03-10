@@ -173,7 +173,7 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 | `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice`; `voice_clone` config still uses `prompt_audio_path` / `prompt_text`, and the service maps them to the current `mlx-audio` `ref_audio` / `ref_text` inputs at runtime |
 | `instructions` | Combined with the `voice_design` description or request-level `instructions` and passed best-effort to the backend | `instruct` when supported |
 | `speed` | Range validated like OpenAI | `speed` |
-| `repetition_penalty` | Optional, default `1.05`. On the Base-model ICL voice-clone path (`voice_clone`), values below `1.5` are automatically raised to `1.5` | `repetition_penalty` |
+| `repetition_penalty` | Optional. If explicitly provided in the request, that value is used first. Otherwise the service reads the voice-level setting from `voices.json`, and falls back to `1.05` when unset. On the Base-model ICL voice-clone path (`voice_clone`), values below `1.5` are automatically raised to `1.5` | `repetition_penalty` |
 | `response_format` | Encoded to `mp3`, `opus`, `aac`, `flac`, `wav`, or `pcm` | Post-processed response audio |
 | `stream_format=sse` | Returns OpenAI-style `speech.audio.delta` / `speech.audio.done` SSE events | Service-side chunked stream |
 
@@ -181,7 +181,16 @@ For OpenAI client compatibility, model names such as `gpt-4o-mini-tts`, `tts-1`,
 
 The main gap is language: OpenAI TTS does not expose a `language` field, while Qwen3-TTS benefits from one. The service infers a best-effort language from the input script and falls back to `English`. Override with `QWEN_TTS_LANGUAGE`.
 
-The service also pins a stability-oriented set of Qwen3-TTS sampling defaults: `temperature=0.6`, `top_p=0.9`, and `top_k=30`. `repetition_penalty` is now wired as well, with a default of `1.05`. On the Base-model ICL voice-clone path (`voice_clone`), any value below `1.5` is raised to `1.5`, so values under `1.5` are effectively meaningless in that scenario.
+Qwen3-TTS sampling defaults are `temperature=0.6`, `top_p=0.9`, `top_k=30`, and `repetition_penalty=1.05`. You can override them per voice in `voices.json`; missing fields fall back to those defaults. `repetition_penalty` can also be overridden per request. On the Base-model ICL voice-clone path (`voice_clone`), any `repetition_penalty` below `1.5` is raised to `1.5`.
+
+Sampling parameter guidance (rule-of-thumb):
+
+| Parameter | Recommended (stability-first) | Recommended (expressiveness-first) | Stability impact |
+| --- | --- | --- | --- |
+| `Temperature` | `0.5 - 0.6` | `0.8 - 0.9` | Too high may drift timbre and introduce hallucinated noise; too low may sound flat and less emotional |
+| `Top-P` | `0.8` | `0.95` | Nucleus sampling probability; lower values can filter low-probability tokens that may cause hoarse artifacts |
+| `Top-K` | `20` | `50` | Search-space limiter; values that are too large may introduce pronunciations inconsistent with the target voice |
+| `Repetition Penalty` | `1.05` | `1.1` | Helps reduce looping repetition and stutter-like syllable artifacts |
 
 ## Configuration
 
@@ -219,13 +228,19 @@ If you want to override those defaults, or add Qwen3-TTS built-in speakers, voic
 - `voice_clone`
   Provide a reference clip via `prompt_audio_path` and its transcript via `prompt_text`. The service maps them to `mlx-audio` `ref_audio` / `ref_text`, and Base-model voice cloning currently uses the ICL path, so the transcript should match the reference audio as closely as possible.
 
+Each voice entry can also define optional sampling fields: `temperature`, `top_p`, `top_k`, and `repetition_penalty`. When omitted, they fall back to `0.6`, `0.9`, `30`, and `1.05`.
+
 Example:
 
 ```json
 {
   "storyteller": {
     "mode": "voice_design",
-    "voice_description": "Warm Mandarin narrator voice, low expressiveness."
+    "voice_description": "Warm Mandarin narrator voice, low expressiveness.",
+    "temperature": 0.65,
+    "top_p": 0.88,
+    "top_k": 40,
+    "repetition_penalty": 1.1
   },
   "vivian": {
     "mode": "custom_voice",

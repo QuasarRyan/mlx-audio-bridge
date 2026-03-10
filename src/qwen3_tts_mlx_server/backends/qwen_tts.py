@@ -10,14 +10,11 @@ from typing import Any
 import numpy as np
 
 from ..errors import OpenAIHTTPException
+from ..settings import DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE, DEFAULT_TOP_K, DEFAULT_TOP_P
 from .base import SpeechSynthesisRequest, SynthesizedAudio, TTSBackend
 
 
 class QwenMLXTTSBackend(TTSBackend):
-    _DEFAULT_TEMPERATURE = 0.6
-    _DEFAULT_TOP_P = 0.9
-    _DEFAULT_TOP_K = 30
-    _DEFAULT_REPETITION_PENALTY = 1.05
     _ICL_REPETITION_PENALTY_FLOOR = 1.5
 
     def __init__(self, default_sample_rate: int = 24_000) -> None:
@@ -90,16 +87,19 @@ class QwenMLXTTSBackend(TTSBackend):
         except (TypeError, ValueError):
             generate_parameters = set()
 
+        temperature = request.temperature if request.temperature is not None else DEFAULT_TEMPERATURE
+        top_p = request.top_p if request.top_p is not None else DEFAULT_TOP_P
+        top_k = request.top_k if request.top_k is not None else DEFAULT_TOP_K
         generate_kwargs: dict[str, Any] = {
             "text": request.text,
             "speed": request.speed,
-            "temperature": self._DEFAULT_TEMPERATURE,
-            "top_p": self._DEFAULT_TOP_P,
-            "top_k": self._DEFAULT_TOP_K,
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
         }
         repetition_penalty = request.repetition_penalty
         if repetition_penalty is None:
-            repetition_penalty = self._DEFAULT_REPETITION_PENALTY
+            repetition_penalty = DEFAULT_REPETITION_PENALTY
         if request.voice_mode == "voice_clone" and repetition_penalty < self._ICL_REPETITION_PENALTY_FLOOR:
             repetition_penalty = self._ICL_REPETITION_PENALTY_FLOOR
         if not generate_parameters or "repetition_penalty" in generate_parameters:

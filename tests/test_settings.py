@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import qwen3_tts_mlx_server.settings as settings_module
-from qwen3_tts_mlx_server.settings import DEFAULT_VOICE_DESIGN_SPEAKER, Settings, load_settings
+from qwen3_tts_mlx_server.settings import (
+    DEFAULT_REPETITION_PENALTY,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_TOP_K,
+    DEFAULT_TOP_P,
+    DEFAULT_VOICE_DESIGN_SPEAKER,
+    Settings,
+    load_settings,
+)
 
 
 def test_load_settings_builds_model_paths_from_shared_model_dir(monkeypatch) -> None:
@@ -129,3 +139,55 @@ def test_voice_modes_resolve_backend_voice_and_prompt_fields() -> None:
         "Voice design: A calm maid voice.\n"
         "Additional instructions: Speak a little slower."
     )
+
+
+def test_voice_sampling_resolves_override_and_defaults() -> None:
+    settings = Settings(
+        api_key=None,
+        default_tts_model="tts-model",
+        custom_voice_tts_model="custom-voice-model",
+        voice_design_tts_model="voice-design-model",
+        large_custom_voice_tts_model="large-custom-voice-model",
+        default_asr_model="asr-model",
+        forced_language=None,
+        voices={
+            "storyteller": {
+                "mode": "voice_design",
+                "voice_description": "Warm narrator.",
+                "temperature": 0.78,
+                "top_p": 0.83,
+                "top_k": 56,
+                "repetition_penalty": 1.22,
+            }
+        },
+    )
+
+    assert settings.resolve_temperature("storyteller") == 0.78
+    assert settings.resolve_top_p("storyteller") == 0.83
+    assert settings.resolve_top_k("storyteller") == 56
+    assert settings.resolve_repetition_penalty("storyteller") == 1.22
+
+    assert settings.resolve_temperature("missing-voice") == DEFAULT_TEMPERATURE
+    assert settings.resolve_top_p("missing-voice") == DEFAULT_TOP_P
+    assert settings.resolve_top_k("missing-voice") == DEFAULT_TOP_K
+    assert settings.resolve_repetition_penalty("missing-voice") == DEFAULT_REPETITION_PENALTY
+
+
+def test_load_settings_rejects_invalid_voice_sampling_values(monkeypatch, tmp_path) -> None:
+    voices_file = tmp_path / "voices.json"
+    voices_file.write_text(
+        json.dumps(
+            {
+                "alloy": {
+                    "mode": "voice_design",
+                    "voice_description": "Calm and bright.",
+                    "top_p": 1.2,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings_module, "DEFAULT_VOICES_FILE", str(voices_file))
+
+    with pytest.raises(ValueError, match="top_p"):
+        load_settings()

@@ -11,6 +11,10 @@ from typing import TypeAlias
 DEFAULT_MODEL_DIR = "/opt/mlx-audio-bridge/models"
 DEFAULT_VOICES_FILE = "/opt/mlx-audio-bridge/config/voices.json"
 DEFAULT_VOICE_DESIGN_SPEAKER = "Chelsie"
+DEFAULT_TEMPERATURE = 0.6
+DEFAULT_TOP_P = 0.9
+DEFAULT_TOP_K = 30
+DEFAULT_REPETITION_PENALTY = 1.05
 DEFAULT_TTS_MODEL_NAME = "Qwen3-TTS-12Hz-0.6B-Base-bf16"
 DEFAULT_ASR_MODEL_NAME = "Qwen3-ASR-0.6B-8bit"
 LEGACY_DEFAULT_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
@@ -19,8 +23,10 @@ TTS_QUANTIZATION_PREFERENCE = ("8bit", "6bit", "5bit", "4bit", "bf16")
 OPENAI_TTS_ALIASES = ("gpt-4o-mini-tts", "tts-1", "tts-1-hd")
 OPENAI_STT_ALIASES = ("gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1")
 
-VoiceConfig: TypeAlias = dict[str, str]
+VoiceConfigValue: TypeAlias = str | int | float
+VoiceConfig: TypeAlias = dict[str, VoiceConfigValue]
 VoicesConfig: TypeAlias = dict[str, VoiceConfig]
+_VOICE_NUMERIC_FIELDS = {"temperature", "top_p", "top_k", "repetition_penalty"}
 
 DEFAULT_VOICES: VoicesConfig = {
     "alloy": {
@@ -173,36 +179,36 @@ class Settings:
         return self.voices.get(requested_voice, {"mode": "custom_voice", "speaker": requested_voice})
 
     def resolve_voice_mode(self, requested_voice: str) -> str:
-        return self.resolve_voice_config(requested_voice).get("mode", "custom_voice")
+        return _read_voice_string(self.resolve_voice_config(requested_voice), "mode") or "custom_voice"
 
     def resolve_voice(self, requested_voice: str) -> str:
         config = self.resolve_voice_config(requested_voice)
-        mode = config.get("mode", "custom_voice")
+        mode = _read_voice_string(config, "mode") or "custom_voice"
         if mode == "custom_voice":
-            return config.get("speaker") or requested_voice
+            return _read_voice_string(config, "speaker") or requested_voice
         if mode == "voice_design":
-            return config.get("speaker") or DEFAULT_VOICE_DESIGN_SPEAKER
+            return _read_voice_string(config, "speaker") or DEFAULT_VOICE_DESIGN_SPEAKER
         return ""
 
     def resolve_prompt_audio_path(self, requested_voice: str) -> str | None:
         config = self.resolve_voice_config(requested_voice)
-        if config.get("mode") != "voice_clone":
+        if _read_voice_string(config, "mode") != "voice_clone":
             return None
-        return config.get("prompt_audio_path")
+        return _read_voice_string(config, "prompt_audio_path")
 
     def resolve_prompt_text(self, requested_voice: str) -> str | None:
         config = self.resolve_voice_config(requested_voice)
-        if config.get("mode") != "voice_clone":
+        if _read_voice_string(config, "mode") != "voice_clone":
             return None
-        return config.get("prompt_text")
+        return _read_voice_string(config, "prompt_text")
 
     def compose_instructions(self, requested_voice: str, instructions: str | None) -> str | None:
         config = self.resolve_voice_config(requested_voice)
         base_instruction = None
-        if config.get("mode") == "voice_design":
-            base_instruction = config.get("voice_description")
-        elif config.get("mode") == "custom_voice":
-            base_instruction = config.get("instructions")
+        if _read_voice_string(config, "mode") == "voice_design":
+            base_instruction = _read_voice_string(config, "voice_description")
+        elif _read_voice_string(config, "mode") == "custom_voice":
+            base_instruction = _read_voice_string(config, "instructions")
 
         if base_instruction and instructions:
             return f"Voice design: {base_instruction}\nAdditional instructions: {instructions}"
@@ -211,6 +217,22 @@ class Settings:
         if base_instruction:
             return f"Voice design: {base_instruction}"
         return None
+
+    def resolve_temperature(self, requested_voice: str) -> float:
+        return _read_voice_float(self.resolve_voice_config(requested_voice), "temperature", DEFAULT_TEMPERATURE)
+
+    def resolve_top_p(self, requested_voice: str) -> float:
+        return _read_voice_float(self.resolve_voice_config(requested_voice), "top_p", DEFAULT_TOP_P)
+
+    def resolve_top_k(self, requested_voice: str) -> int:
+        return _read_voice_int(self.resolve_voice_config(requested_voice), "top_k", DEFAULT_TOP_K)
+
+    def resolve_repetition_penalty(self, requested_voice: str) -> float:
+        return _read_voice_float(
+            self.resolve_voice_config(requested_voice),
+            "repetition_penalty",
+            DEFAULT_REPETITION_PENALTY,
+        )
 
     def infer_language(self, text: str) -> str:
         if self.forced_language:
@@ -224,6 +246,53 @@ class Settings:
         return "English"
 
 
+def _read_voice_string(config: VoiceConfig, field: str) -> str | None:
+    value = config.get(field)
+    if isinstance(value, str):
+        return value
+    return None
+
+
+def _read_voice_float(config: VoiceConfig, field: str, default: float) -> float:
+    value = config.get(field)
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    return default
+
+
+def _read_voice_int(config: VoiceConfig, field: str, default: int) -> int:
+    value = config.get(field)
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        numeric = float(value)
+        if numeric.is_integer():
+            return int(numeric)
+    return default
+
+
+def _validate_voice_numeric_field(*, source: str, voice_name: str, field: str, value: object) -> int | float:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise ValueError(f"{source} voice '{voice_name}' field '{field}' must be numeric.")
+
+    numeric = float(value)
+    if field == "temperature":
+        if numeric <= 0:
+            raise ValueError(f"{source} voice '{voice_name}' field 'temperature' must be > 0.")
+        return numeric
+    if field == "top_p":
+        if numeric <= 0 or numeric > 1:
+            raise ValueError(f"{source} voice '{voice_name}' field 'top_p' must be in (0, 1].")
+        return numeric
+    if field == "top_k":
+        if numeric < 1 or not numeric.is_integer():
+            raise ValueError(f"{source} voice '{voice_name}' field 'top_k' must be an integer >= 1.")
+        return int(numeric)
+    if field == "repetition_penalty":
+        if numeric < 1.0:
+            raise ValueError(f"{source} voice '{voice_name}' field 'repetition_penalty' must be >= 1.0.")
+        return numeric
+    raise ValueError(f"{source} voice '{voice_name}' has unsupported numeric field '{field}'.")
+
+
 def _validate_voices_config(raw_mapping: object, *, source: str) -> VoicesConfig:
     if not isinstance(raw_mapping, dict):
         raise ValueError(f"{source} must resolve to a JSON object.")
@@ -233,25 +302,37 @@ def _validate_voices_config(raw_mapping: object, *, source: str) -> VoicesConfig
             raise ValueError(f"{source} must contain only string keys.")
         if not isinstance(value, dict):
             raise ValueError(f"{source} values must be JSON objects.")
-        invalid_items = [
-            (nested_key, nested_value)
-            for nested_key, nested_value in value.items()
-            if not isinstance(nested_key, str) or not isinstance(nested_value, str)
-        ]
-        if invalid_items:
-            raise ValueError(f"{source} voice objects must contain only string-to-string fields.")
-        mode = value.get("mode")
+        normalized: VoiceConfig = {}
+        for nested_key, nested_value in value.items():
+            if not isinstance(nested_key, str):
+                raise ValueError(f"{source} voice objects must contain only string keys.")
+            if nested_key in _VOICE_NUMERIC_FIELDS:
+                normalized[nested_key] = _validate_voice_numeric_field(
+                    source=source,
+                    voice_name=key,
+                    field=nested_key,
+                    value=nested_value,
+                )
+                continue
+            if not isinstance(nested_value, str):
+                raise ValueError(
+                    f"{source} voice '{key}' field '{nested_key}' must be a string "
+                    "unless it is one of temperature/top_p/top_k/repetition_penalty."
+                )
+            normalized[nested_key] = nested_value
+
+        mode = _read_voice_string(normalized, "mode")
         if mode not in {"voice_design", "custom_voice", "voice_clone"}:
             raise ValueError(
                 f"{source} entries must declare mode as one of voice_design, custom_voice, or voice_clone."
             )
-        if mode == "voice_design" and "voice_description" not in value:
+        if mode == "voice_design" and "voice_description" not in normalized:
             raise ValueError(f"{source} voice_design entries must define voice_description.")
-        if mode == "custom_voice" and "speaker" not in value:
+        if mode == "custom_voice" and "speaker" not in normalized:
             raise ValueError(f"{source} custom_voice entries must define speaker.")
-        if mode == "voice_clone" and ("prompt_audio_path" not in value or "prompt_text" not in value):
+        if mode == "voice_clone" and ("prompt_audio_path" not in normalized or "prompt_text" not in normalized):
             raise ValueError(f"{source} voice_clone entries must define prompt_audio_path and prompt_text.")
-        validated[key] = dict(value)
+        validated[key] = normalized
     return validated
 
 

@@ -78,6 +78,9 @@ def create_app(settings: Settings | None = None, tts_backend: TTSBackend | None 
             )
 
         voice_mode = resolved_settings.resolve_voice_mode(request.voice)
+        repetition_penalty = request.repetition_penalty
+        if repetition_penalty is None:
+            repetition_penalty = resolved_settings.resolve_repetition_penalty(request.voice)
         synthesis_request = SpeechSynthesisRequest(
             public_model=request.model,
             backend_model=resolved_settings.resolve_tts_model(request.model, voice_mode),
@@ -89,7 +92,10 @@ def create_app(settings: Settings | None = None, tts_backend: TTSBackend | None 
             prompt_text=resolved_settings.resolve_prompt_text(request.voice),
             language=resolved_settings.infer_language(request.input),
             speed=request.speed,
-            repetition_penalty=request.repetition_penalty,
+            temperature=resolved_settings.resolve_temperature(request.voice),
+            top_p=resolved_settings.resolve_top_p(request.voice),
+            top_k=resolved_settings.resolve_top_k(request.voice),
+            repetition_penalty=repetition_penalty,
             response_format=request.response_format,
         )
         synthesized = await run_in_threadpool(resolved_backend.synthesize, synthesis_request)

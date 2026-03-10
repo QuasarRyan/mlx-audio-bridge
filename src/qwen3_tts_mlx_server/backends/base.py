@@ -18,6 +18,9 @@ class SpeechSynthesisRequest:
     prompt_text: str | None
     language: str | None
     speed: float
+    temperature: float | None
+    top_p: float | None
+    top_k: int | None
     repetition_penalty: float | None
     response_format: str
 

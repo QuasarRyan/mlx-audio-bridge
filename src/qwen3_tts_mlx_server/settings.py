@@ -15,9 +15,10 @@ DEFAULT_TEMPERATURE = 0.6
 DEFAULT_TOP_P = 0.9
 DEFAULT_TOP_K = 30
 DEFAULT_REPETITION_PENALTY = 1.05
-DEFAULT_TTS_MODEL_NAME = "Qwen3-TTS-12Hz-0.6B-Base-bf16"
+DEFAULT_TTS_MODEL_NAME = "Qwen3-TTS-12Hz-1.7B-Base-bf16"
 DEFAULT_ASR_MODEL_NAME = "Qwen3-ASR-0.6B-8bit"
-LEGACY_DEFAULT_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
+LEGACY_DEFAULT_BASE_0_6B_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
+LEGACY_DEFAULT_BASE_1_7B_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16"
 LEGACY_DEFAULT_ASR_MODEL = "mlx-community/Qwen3-ASR-0.6B-8bit"
 TTS_QUANTIZATION_PREFERENCE = ("8bit", "6bit", "5bit", "4bit", "bf16")
 OPENAI_TTS_ALIASES = ("gpt-4o-mini-tts", "tts-1", "tts-1-hd")
@@ -123,8 +124,13 @@ class TTSFamilySpec:
 
 DEFAULT_TTS_FAMILY = TTSFamilySpec(
     public_id="Qwen3-TTS-12Hz-0.6B-Base",
-    legacy_model=LEGACY_DEFAULT_TTS_MODEL,
+    legacy_model=LEGACY_DEFAULT_BASE_0_6B_TTS_MODEL,
     required_tokens=("Qwen3-TTS-12Hz", "0.6B", "Base"),
+)
+LARGE_BASE_TTS_FAMILY = TTSFamilySpec(
+    public_id="Qwen3-TTS-12Hz-1.7B-Base",
+    legacy_model=LEGACY_DEFAULT_BASE_1_7B_TTS_MODEL,
+    required_tokens=("Qwen3-TTS-12Hz", "1.7B", "Base"),
 )
 CUSTOM_VOICE_TTS_FAMILY = TTSFamilySpec(
     public_id="Qwen3-TTS-12Hz-0.6B-CustomVoice",
@@ -147,6 +153,8 @@ LARGE_CUSTOM_VOICE_TTS_FAMILY = TTSFamilySpec(
 class Settings:
     api_key: str | None
     default_tts_model: str
+    small_base_tts_model: str
+    large_base_tts_model: str
     custom_voice_tts_model: str
     voice_design_tts_model: str
     large_custom_voice_tts_model: str
@@ -165,11 +173,14 @@ class Settings:
 
     def public_model_roots(self) -> dict[str, str]:
         public_models = {alias: self.default_tts_model for alias in OPENAI_TTS_ALIASES}
-        public_models[DEFAULT_TTS_FAMILY.public_id] = self.default_tts_model
+        public_models[DEFAULT_TTS_FAMILY.public_id] = self.small_base_tts_model
+        public_models[LARGE_BASE_TTS_FAMILY.public_id] = self.large_base_tts_model
         public_models[CUSTOM_VOICE_TTS_FAMILY.public_id] = self.custom_voice_tts_model
         public_models[VOICE_DESIGN_TTS_FAMILY.public_id] = self.voice_design_tts_model
         public_models[LARGE_CUSTOM_VOICE_TTS_FAMILY.public_id] = self.large_custom_voice_tts_model
         public_models[self.default_tts_model] = self.default_tts_model
+        public_models[self.small_base_tts_model] = self.small_base_tts_model
+        public_models[self.large_base_tts_model] = self.large_base_tts_model
         public_models[self.custom_voice_tts_model] = self.custom_voice_tts_model
         public_models[self.voice_design_tts_model] = self.voice_design_tts_model
         public_models[self.large_custom_voice_tts_model] = self.large_custom_voice_tts_model
@@ -440,10 +451,18 @@ def _resolve_tts_model_location() -> str:
 
     model_dir = os.getenv("QWEN_MODEL_DIR", DEFAULT_MODEL_DIR).strip()
     explicit_model_name = os.getenv("QWEN_TTS_MODEL_NAME")
+    if explicit_model_name is None:
+        discovered = _discover_preferred_tts_model(model_dir, LARGE_BASE_TTS_FAMILY)
+        if discovered:
+            return discovered
+        discovered = _discover_preferred_tts_model(model_dir, DEFAULT_TTS_FAMILY)
+        if discovered:
+            return discovered
+        return LARGE_BASE_TTS_FAMILY.legacy_model
     return _resolve_tts_family_location(
-        DEFAULT_TTS_FAMILY,
+        LARGE_BASE_TTS_FAMILY,
         model_dir=model_dir,
-        explicit_model_name=explicit_model_name.strip() if explicit_model_name is not None else None,
+        explicit_model_name=explicit_model_name.strip(),
     )
 
 
@@ -453,6 +472,8 @@ def load_settings() -> Settings:
     return Settings(
         api_key=os.getenv("API_KEY"),
         default_tts_model=_resolve_tts_model_location(),
+        small_base_tts_model=_resolve_tts_family_location(DEFAULT_TTS_FAMILY, model_dir=model_dir),
+        large_base_tts_model=_resolve_tts_family_location(LARGE_BASE_TTS_FAMILY, model_dir=model_dir),
         custom_voice_tts_model=_resolve_tts_family_location(CUSTOM_VOICE_TTS_FAMILY, model_dir=model_dir),
         voice_design_tts_model=_resolve_tts_family_location(VOICE_DESIGN_TTS_FAMILY, model_dir=model_dir),
         large_custom_voice_tts_model=_resolve_tts_family_location(LARGE_CUSTOM_VOICE_TTS_FAMILY, model_dir=model_dir),

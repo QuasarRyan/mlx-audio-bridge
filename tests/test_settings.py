@@ -51,6 +51,7 @@ def test_load_settings_prefers_highest_supported_local_tts_quantization(monkeypa
     settings = load_settings()
 
     assert settings.default_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-Base-0.6B-8bit")
+    assert settings.small_base_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-Base-0.6B-8bit")
 
 
 def test_load_settings_falls_back_to_legacy_tts_model_when_no_local_quantization_exists(monkeypatch, tmp_path) -> None:
@@ -60,7 +61,34 @@ def test_load_settings_falls_back_to_legacy_tts_model_when_no_local_quantization
 
     settings = load_settings()
 
-    assert settings.default_tts_model == "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
+    assert settings.default_tts_model == "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16"
+    assert settings.large_base_tts_model == "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16"
+
+
+def test_load_settings_uses_local_1_7b_base_when_available(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("QWEN_TTS_MODEL", raising=False)
+    monkeypatch.delenv("QWEN_TTS_MODEL_NAME", raising=False)
+    monkeypatch.setenv("QWEN_MODEL_DIR", str(tmp_path))
+    (tmp_path / "Qwen3-TTS-12Hz-1.7B-Base-8bit").mkdir()
+
+    settings = load_settings()
+
+    assert settings.default_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-1.7B-Base-8bit")
+    assert settings.large_base_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-1.7B-Base-8bit")
+
+
+def test_load_settings_prefers_local_1_7b_base_over_local_0_6b_base(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("QWEN_TTS_MODEL", raising=False)
+    monkeypatch.delenv("QWEN_TTS_MODEL_NAME", raising=False)
+    monkeypatch.setenv("QWEN_MODEL_DIR", str(tmp_path))
+    (tmp_path / "Qwen3-TTS-12Hz-0.6B-Base-8bit").mkdir()
+    (tmp_path / "Qwen3-TTS-12Hz-1.7B-Base-6bit").mkdir()
+
+    settings = load_settings()
+
+    assert settings.default_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-1.7B-Base-6bit")
+    assert settings.small_base_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-0.6B-Base-8bit")
+    assert settings.large_base_tts_model == str(tmp_path / "Qwen3-TTS-12Hz-1.7B-Base-6bit")
 
 
 def test_load_settings_resolves_other_supported_tts_families(monkeypatch, tmp_path) -> None:
@@ -105,6 +133,8 @@ def test_voice_modes_resolve_backend_voice_and_prompt_fields() -> None:
     settings = Settings(
         api_key=None,
         default_tts_model="tts-model",
+        small_base_tts_model="small-base-model",
+        large_base_tts_model="large-base-model",
         custom_voice_tts_model="custom-voice-model",
         voice_design_tts_model="voice-design-model",
         large_custom_voice_tts_model="large-custom-voice-model",
@@ -135,6 +165,8 @@ def test_voice_modes_resolve_backend_voice_and_prompt_fields() -> None:
     assert settings.resolve_tts_model("gpt-4o-mini-tts", "voice_design") == "voice-design-model"
     assert settings.resolve_tts_model("gpt-4o-mini-tts", "custom_voice") == "custom-voice-model"
     assert settings.resolve_tts_model("gpt-4o-mini-tts", "voice_clone") == "tts-model"
+    assert settings.resolve_tts_model("Qwen3-TTS-12Hz-0.6B-Base", "voice_clone") == "small-base-model"
+    assert settings.resolve_tts_model("Qwen3-TTS-12Hz-1.7B-Base", "voice_clone") == "large-base-model"
     assert settings.compose_instructions("maid", "Speak a little slower.") == (
         "Voice design: A calm maid voice.\n"
         "Additional instructions: Speak a little slower."
@@ -145,6 +177,8 @@ def test_voice_sampling_resolves_override_and_defaults() -> None:
     settings = Settings(
         api_key=None,
         default_tts_model="tts-model",
+        small_base_tts_model="small-base-model",
+        large_base_tts_model="large-base-model",
         custom_voice_tts_model="custom-voice-model",
         voice_design_tts_model="voice-design-model",
         large_custom_voice_tts_model="large-custom-voice-model",

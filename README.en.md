@@ -168,7 +168,7 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 
 | OpenAI field | Service behavior | Qwen3-TTS / MLX mapping |
 | --- | --- | --- |
-| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`), a direct MLX model id / path, and the four family ids `Qwen3-TTS-12Hz-0.6B-Base`, `Qwen3-TTS-12Hz-0.6B-CustomVoice`, `Qwen3-TTS-12Hz-1.7B-VoiceDesign`, and `Qwen3-TTS-12Hz-1.7B-CustomVoice` | OpenAI aliases auto-select a family from the voice mode: `voice_design -> 1.7B VoiceDesign`, `custom_voice -> 0.6B CustomVoice`, `voice_clone -> 0.6B Base`. Explicit family ids auto-select a compatible quantized local directory from `QWEN_MODEL_DIR`, or fall back to the corresponding `mlx-community` default model |
+| `model` | Accepts OpenAI aliases (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`), a direct MLX model id / path, and the five family ids `Qwen3-TTS-12Hz-0.6B-Base`, `Qwen3-TTS-12Hz-1.7B-Base`, `Qwen3-TTS-12Hz-0.6B-CustomVoice`, `Qwen3-TTS-12Hz-1.7B-VoiceDesign`, and `Qwen3-TTS-12Hz-1.7B-CustomVoice` | OpenAI aliases auto-select a family from the voice mode: `voice_design -> 1.7B VoiceDesign`, `custom_voice -> 0.6B CustomVoice`, `voice_clone -> Base (prefer 1.7B, then 0.6B)`. Explicit family ids auto-select a compatible quantized local directory from `QWEN_MODEL_DIR`, or fall back to the corresponding `mlx-community` default model |
 | `input` | Required text input | `text` |
 | `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice`; `voice_clone` config still uses `prompt_audio_path` / `prompt_text`, and the service maps them to the current `mlx-audio` `ref_audio` / `ref_text` inputs at runtime |
 | `instructions` | Combined with the `voice_design` description or request-level `instructions` and passed best-effort to the backend | `instruct` when supported |
@@ -200,7 +200,7 @@ Sampling parameter guidance (rule-of-thumb):
 | `BIND_ADDRESS` | `127.0.0.1` | Listener address; set this to `0.0.0.0` if you want to allow external access |
 | `PORT` | `8008` | Listener port |
 | `QWEN_MODEL_DIR` | `/opt/mlx-audio-bridge/models` | Shared root directory for local TTS and STT models |
-| `QWEN_TTS_MODEL_NAME` | empty | Optional TTS model subdirectory name. If unset, the service auto-selects a compatible local `Qwen3-TTS-12Hz Base 0.6B` directory from `QWEN_MODEL_DIR` in this order: `8bit`, `6bit`, `5bit`, `4bit`, `bf16` |
+| `QWEN_TTS_MODEL_NAME` | empty | Optional TTS model subdirectory name. If unset, the service first auto-selects a compatible local `Qwen3-TTS-12Hz Base 1.7B` directory from `QWEN_MODEL_DIR` in this order: `8bit`, `6bit`, `5bit`, `4bit`, `bf16`. If no local `1.7B Base` exists, it then tries a local `0.6B Base`. If neither exists, it falls back to the Hugging Face `1.7B Base` |
 | `QWEN_ASR_MODEL_NAME` | `Qwen3-ASR-0.6B-8bit` | Reserved STT model subdirectory name |
 | `QWEN_TTS_MODEL` | empty | Backward-compatible direct override for a TTS model path or Hugging Face model id |
 | `QWEN_ASR_MODEL` | empty | Backward-compatible direct override for an STT model path or Hugging Face model id |

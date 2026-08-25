@@ -5,9 +5,8 @@
   <key>Label</key>
   <string>com.quasarryan.mlxaudio.api</string>
 
-  <!-- Default: run as root in the privileged system domain. -->
   <key>UserName</key>
-  <string>root</string>
+  <string>ryan</string>
 
   <key>ProgramArguments</key>
   <array>
@@ -24,7 +23,7 @@
     <key>API_KEY</key>
     <string>change-me</string>
     <key>BIND_ADDRESS</key>
-    <string>127.0.0.1</string>
+    <string>0.0.0.0</string>
     <key>PORT</key>
     <string>8008</string>
     <key>QWEN_MODEL_DIR</key>

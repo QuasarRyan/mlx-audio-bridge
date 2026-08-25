@@ -12,3 +12,4 @@ config/*
 references/*
 !references/.gitkeep
 run/
+logs/

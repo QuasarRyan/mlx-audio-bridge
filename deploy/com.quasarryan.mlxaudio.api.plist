@@ -27,7 +27,7 @@
     <key>PORT</key>
     <string>8008</string>
     <key>QWEN_MODEL_DIR</key>
-    <string>/opt/models</string>
+    <string>/opt/mlx-audio-bridge/models</string>
   </dict>
 
   <key>RunAtLoad</key>

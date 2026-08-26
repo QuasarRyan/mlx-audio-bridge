@@ -110,6 +110,32 @@ def test_speech_endpoint_supports_voice_clone_config() -> None:
     assert backend_call.top_p == 0.9
     assert backend_call.top_k == 30
     assert backend_call.repetition_penalty == 1.05
+    assert backend_call.max_tokens == 1200
+
+
+def test_speech_endpoint_forwards_generation_overrides() -> None:
+    client, backend = build_client()
+
+    response = client.post(
+        "/v1/audio/speech",
+        json={
+            "model": "gpt-4o-mini-tts",
+            "input": "Use a bounded generation length.",
+            "voice": "assistant",
+            "response_format": "wav",
+            "max_tokens": 640,
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "top_k": 40,
+        },
+    )
+
+    assert response.status_code == 200
+    backend_call = backend.calls[-1]
+    assert backend_call.max_tokens == 640
+    assert backend_call.temperature == 0.7
+    assert backend_call.top_p == 0.95
+    assert backend_call.top_k == 40
 
 
 def test_speech_endpoint_selects_model_family_from_voice_mode() -> None:
@@ -161,10 +187,12 @@ def test_backend_enforces_repetition_penalty_floor_for_voice_clone() -> None:
             top_p: float,
             top_k: int,
             repetition_penalty: float,
+            max_tokens: int,
             **kwargs,
         ):
             _ = (text, speed, temperature, top_p, top_k, kwargs)
             captured["repetition_penalty"] = repetition_penalty
+            captured["max_tokens"] = max_tokens
             return np.zeros(10, dtype=np.float32), 24_000
 
     request = SpeechSynthesisRequest(
@@ -178,6 +206,7 @@ def test_backend_enforces_repetition_penalty_floor_for_voice_clone() -> None:
         prompt_text="Reference prompt text.",
         language="English",
         speed=1.0,
+        max_tokens=1200,
         temperature=None,
         top_p=None,
         top_k=None,
@@ -190,6 +219,7 @@ def test_backend_enforces_repetition_penalty_floor_for_voice_clone() -> None:
     assert sample_rate == 24_000
     assert len(audio) == 10
     assert captured["repetition_penalty"] == 1.5
+    assert captured["max_tokens"] == 1200
 
 
 def test_speech_endpoint_supports_sse_streaming() -> None:

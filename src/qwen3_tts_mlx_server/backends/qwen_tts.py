@@ -104,6 +104,8 @@ class QwenMLXTTSBackend(TTSBackend):
             repetition_penalty = self._ICL_REPETITION_PENALTY_FLOOR
         if not generate_parameters or "repetition_penalty" in generate_parameters:
             generate_kwargs["repetition_penalty"] = repetition_penalty
+        if not generate_parameters or "max_tokens" in generate_parameters:
+            generate_kwargs["max_tokens"] = request.max_tokens
         if request.voice:
             generate_kwargs["voice"] = request.voice
         if request.language:

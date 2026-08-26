@@ -92,9 +92,14 @@ def create_app(settings: Settings | None = None, tts_backend: TTSBackend | None 
             prompt_text=resolved_settings.resolve_prompt_text(request.voice),
             language=resolved_settings.infer_language(request.input),
             speed=request.speed,
-            temperature=resolved_settings.resolve_temperature(request.voice),
-            top_p=resolved_settings.resolve_top_p(request.voice),
-            top_k=resolved_settings.resolve_top_k(request.voice),
+            max_tokens=request.max_tokens,
+            temperature=(
+                request.temperature
+                if request.temperature is not None
+                else resolved_settings.resolve_temperature(request.voice)
+            ),
+            top_p=request.top_p if request.top_p is not None else resolved_settings.resolve_top_p(request.voice),
+            top_k=request.top_k if request.top_k is not None else resolved_settings.resolve_top_k(request.voice),
             repetition_penalty=repetition_penalty,
             response_format=request.response_format,
         )

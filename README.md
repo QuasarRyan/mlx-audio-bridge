@@ -175,6 +175,8 @@ OpenAI TTS 请求参数会按下面的方式映射到 `mlx-audio` 的 Qwen3-TTS�
 | `voice` | 如果是 OpenAI 原生音色，则命中服务内置默认配置；如果是 `voices.json` 里的自定义键，则按配置里的模式解析 | `voice`；`voice_clone` 配置项仍写 `prompt_audio_path` / `prompt_text`，服务会在运行时映射到当前 `mlx-audio` 的 `ref_audio` / `ref_text` |
 | `instructions` | 与 `voice_design` 模式里的默认描述或请求内 `instructions` 合并后，尽力传给后端 | `instruct` |
 | `speed` | 按 OpenAI 范围校验 | `speed` |
+| `max_tokens` | 每个文本片段最多生成的 codec token 数；默认 `1200`（与 `mlx-audio` server 一致），用于限制 EOS 未正常结束时的长时间生成 | `max_tokens` |
+| `temperature` / `top_p` / `top_k` | 请求中显式提供时优先；否则使用 `voices.json` 对应音色配置或服务默认值 | 同名参数 |
 | `repetition_penalty` | 可选；请求里显式传值时优先使用请求值。否则按 `voices.json` 对应音色配置读取，未配置时默认 `1.05`。如果是 Base 模型的 ICL 语音克隆路径（`voice_clone`），小于 `1.5` 的值会自动提升到 `1.5` | `repetition_penalty` |
 | `response_format` | 支持 `mp3`、`opus`、`aac`、`flac`、`wav`、`pcm` | 服务端编码输出 |
 | `stream_format=sse` | 返回 OpenAI 风格的 `speech.audio.delta` / `speech.audio.done` 事件 | 服务端分块流式返回 |
@@ -183,7 +185,7 @@ OpenAI TTS 请求参数会按下面的方式映射到 `mlx-audio` 的 Qwen3-TTS�
 
 一个关键差异是 `language`：OpenAI TTS 接口没有这个字段，但 Qwen3-TTS 往往更适合显式语言。当前服务会根据输入文本脚本自动推断语言，默认回落到 `English`；也可以用 `QWEN_TTS_LANGUAGE` 强制指定。
 
-Qwen3-TTS 采样参数的默认值是：`temperature=0.6`、`top_p=0.9`、`top_k=30`、`repetition_penalty=1.05`。你可以在 `voices.json` 里按音色分别覆盖；没配置就回退默认值。`repetition_penalty` 还可以在请求里直接传值做临时覆盖。若走 Base 模型的 ICL 语音克隆路径（`voice_clone`），小于 `1.5` 的 `repetition_penalty` 会被提升到 `1.5`。
+Qwen3-TTS 采样参数的默认值是：`temperature=0.6`、`top_p=0.9`、`top_k=30`、`repetition_penalty=1.05`。单个文本片段的 `max_tokens` 默认是 `1200`；当语音克隆未正常产生 EOS 时，这个上限可避免回退到 `mlx-audio` Python API 的 `4096` token 上限而长时间运行。你可以在 `voices.json` 里按音色分别覆盖；没配置就回退默认值。`repetition_penalty` 还可以在请求里直接传值做临时覆盖。若走 Base 模型的 ICL 语音克隆路径（`voice_clone`），小于 `1.5` 的 `repetition_penalty` 会被提升到 `1.5`。
 
 采样参数填写建议（经验值）：
 

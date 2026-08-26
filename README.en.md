@@ -173,6 +173,8 @@ OpenAI TTS parameters are mapped onto `mlx-audio` Qwen3-TTS as follows:
 | `voice` | OpenAI native voices use built-in defaults; custom entries from `voices.json` are resolved according to their configured mode | `voice`; `voice_clone` config still uses `prompt_audio_path` / `prompt_text`, and the service maps them to the current `mlx-audio` `ref_audio` / `ref_text` inputs at runtime |
 | `instructions` | Combined with the `voice_design` description or request-level `instructions` and passed best-effort to the backend | `instruct` when supported |
 | `speed` | Range validated like OpenAI | `speed` |
+| `max_tokens` | Maximum codec tokens generated per text segment; defaults to `1200` to match the `mlx-audio` server and bound long-running generation when EOS fails | `max_tokens` |
+| `temperature` / `top_p` / `top_k` | An explicit request value wins; otherwise the service uses the voice's `voices.json` value or its default | Same-named parameter |
 | `repetition_penalty` | Optional. If explicitly provided in the request, that value is used first. Otherwise the service reads the voice-level setting from `voices.json`, and falls back to `1.05` when unset. On the Base-model ICL voice-clone path (`voice_clone`), values below `1.5` are automatically raised to `1.5` | `repetition_penalty` |
 | `response_format` | Encoded to `mp3`, `opus`, `aac`, `flac`, `wav`, or `pcm` | Post-processed response audio |
 | `stream_format=sse` | Returns OpenAI-style `speech.audio.delta` / `speech.audio.done` SSE events | Service-side chunked stream |
@@ -181,7 +183,7 @@ For OpenAI client compatibility, model names such as `gpt-4o-mini-tts`, `tts-1`,
 
 The main gap is language: OpenAI TTS does not expose a `language` field, while Qwen3-TTS benefits from one. The service infers a best-effort language from the input script and falls back to `English`. Override with `QWEN_TTS_LANGUAGE`.
 
-Qwen3-TTS sampling defaults are `temperature=0.6`, `top_p=0.9`, `top_k=30`, and `repetition_penalty=1.05`. You can override them per voice in `voices.json`; missing fields fall back to those defaults. `repetition_penalty` can also be overridden per request. On the Base-model ICL voice-clone path (`voice_clone`), any `repetition_penalty` below `1.5` is raised to `1.5`.
+Qwen3-TTS sampling defaults are `temperature=0.6`, `top_p=0.9`, `top_k=30`, and `repetition_penalty=1.05`. `max_tokens` defaults to `1200` per text segment; this prevents a clone that fails to emit EOS from running to the `mlx-audio` Python API default cap of `4096` tokens. You can override them per voice in `voices.json`; missing fields fall back to those defaults. `repetition_penalty` can also be overridden per request. On the Base-model ICL voice-clone path (`voice_clone`), any `repetition_penalty` below `1.5` is raised to `1.5`.
 
 Sampling parameter guidance (rule-of-thumb):
 
